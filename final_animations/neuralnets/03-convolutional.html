@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neural Network — Convolutional Architecture</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #08090d;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; overflow: hidden;
+    font-family: 'IBM Plex Mono', -apple-system, monospace;
+  }
+  .wrap { width: 94vw; max-width: 900px; }
+  canvas { display: block; width: 100%; height: 380px; border-radius: 8px; background: #0d1117; }
+  .meta {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 2px; color: #484f58; font-size: 10px; letter-spacing: 0.1em;
+  }
+  .meta span { color: #d29922; }
+  @media (max-width: 600px) { canvas { height: 300px; } }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="wrap">
+  <div class="meta">
+    <div>NEURAL NETWORK <span>/ CONVOLUTIONAL</span></div>
+    <div>EXAMPLE 03</div>
+  </div>
+  <canvas id="c"></canvas>
+</div>
+
+<script>
+(() => {
+  const T = {
+    void: '#08090d', bg: '#0d1117', surface: '#161b22',
+    border: '#21262d', borderLight: '#30363d',
+    blue: '#58a6ff', blueGlow: 'rgba(88,166,255,0.35)', blueDim: 'rgba(88,166,255,0.08)',
+    cyan: '#39d2c0', cyanGlow: 'rgba(57,210,192,0.35)',
+    green: '#3fb950', greenGlow: 'rgba(63,185,80,0.3)',
+    red: '#f85149', redGlow: 'rgba(248,81,73,0.4)',
+    amber: '#d29922', amberGlow: 'rgba(210,153,34,0.3)',
+    purple: '#bc8cff', purpleGlow: 'rgba(188,140,255,0.3)',
+    text: '#e6edf3', textSec: '#8b949e', textMut: '#484f58',
+  };
+  // --- Color override via postMessage ---
+  function _hexToRgb(h){h=h.replace("#","");return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+  function _rgba(hex,a){const[r,g,b]=_hexToRgb(hex);return "rgba("+r+","+g+","+b+","+a+")";}
+  window.addEventListener("message",function(e){
+    if(e.data&&e.data.type==="theme"){
+      var c=e.data.colors;
+      if(c.blue){T.blue=c.blue;T.blueGlow=_rgba(c.blue,0.35);T.blueDim=_rgba(c.blue,0.08);}
+      if(c.cyan){T.cyan=c.cyan;T.cyanGlow=_rgba(c.cyan,0.35);T.cyanDim=_rgba(c.cyan,0.08);}
+      if(c.green){T.green=c.green;T.greenGlow=_rgba(c.green,0.3);T.greenDim=_rgba(c.green,0.08);}
+      if(c.red){T.red=c.red;T.redGlow=_rgba(c.red,0.4);}
+      if(c.amber){T.amber=c.amber;T.amberGlow=_rgba(c.amber,0.3);T.amberDim=_rgba(c.amber,0.08);}
+      if(c.purple){T.purple=c.purple;T.purpleGlow=_rgba(c.purple,0.3);T.purpleDim=_rgba(c.purple,0.08);}
+      if(c.bg){T.bg=c.bg;var cv=document.querySelector("canvas");if(cv)cv.style.background=c.bg;}
+      if(c.void){T.void=c.void;document.body.style.background=c.void;}
+      if(c.surface)T.surface=c.surface;
+      if(c.border)T.border=c.border;
+      if(c.borderLight)T.borderLight=c.borderLight;
+      if(c.text)T.text=c.text;
+      if(c.textSec)T.textSec=c.textSec;
+      if(c.textMut){T.textMut=c.textMut;var m=document.querySelector(".meta");if(m)m.style.color=c.textMut;}
+    }
+  });
+
+  let mobile = window.innerWidth < 600;
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    mobile = window.innerWidth < 600;
+    const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 2 : 3);
+    const r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function S(w) { return Math.max(0.45, w / 600); }
+  function hexToRgb(hex) {
+    const m = hex.match(/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+    return m ? [parseInt(m[1],16), parseInt(m[2],16), parseInt(m[3],16)] : [128,128,128];
+  }
+  function hexAlpha(hex, a) {
+    const [r,g,b] = hexToRgb(hex);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  function glow(x, y, r, c) {
+    if (mobile) r *= 0.6;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, c); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+
+  /* ── CNN Architecture layers ── */
+  // Each layer: { type, label, gridSize, maps, color }
+  const LAYERS = mobile ? [
+    { type: 'input',  label: 'INPUT',    gridSize: 7, maps: 1, color: T.blue },
+    { type: 'conv',   label: 'CONV1',    gridSize: 5, maps: 2, color: T.cyan },
+    { type: 'conv',   label: 'CONV2',    gridSize: 3, maps: 3, color: T.green },
+    { type: 'fc',     label: 'FC',       gridSize: 1, maps: 4, color: T.purple },
+    { type: 'output', label: 'OUTPUT',   gridSize: 1, maps: 3, color: T.amber },
+  ] : [
+    { type: 'input',  label: 'INPUT',    gridSize: 8, maps: 1, color: T.blue },
+    { type: 'conv',   label: 'CONV1',    gridSize: 6, maps: 3, color: T.cyan },
+    { type: 'pool',   label: 'POOL1',    gridSize: 3, maps: 3, color: T.cyan },
+    { type: 'conv',   label: 'CONV2',    gridSize: 3, maps: 4, color: T.green },
+    { type: 'fc',     label: 'FC',       gridSize: 1, maps: 6, color: T.purple },
+    { type: 'output', label: 'OUTPUT',   gridSize: 1, maps: 3, color: T.amber },
+  ];
+
+  /* ── Feature map data (random activations, regenerated per "inference") ── */
+  let featureMaps = [];
+  let targetMaps = [];
+
+  function generateMaps() {
+    targetMaps = LAYERS.map(layer => {
+      const maps = [];
+      for (let m = 0; m < layer.maps; m++) {
+        const grid = [];
+        for (let r = 0; r < layer.gridSize; r++) {
+          const row = [];
+          for (let c = 0; c < layer.gridSize; c++) {
+            row.push(Math.random());
+          }
+          grid.push(row);
+        }
+        maps.push(grid);
+      }
+      return maps;
+    });
+  }
+
+  function initMaps() {
+    featureMaps = LAYERS.map(layer => {
+      const maps = [];
+      for (let m = 0; m < layer.maps; m++) {
+        const grid = [];
+        for (let r = 0; r < layer.gridSize; r++) {
+          const row = [];
+          for (let c = 0; c < layer.gridSize; c++) {
+            row.push(0);
+          }
+          grid.push(row);
+        }
+        maps.push(grid);
+      }
+      return maps;
+    });
+    generateMaps();
+  }
+  initMaps();
+
+  /* ── Scan state ── */
+  const scanDuration = 4.5; // seconds to scan through all layers
+  const pauseDuration = 2.0;
+  const totalCycle = scanDuration + pauseDuration;
+
+  // Classification results
+  const classLabels = ['CAT', 'DOG', 'BIRD'];
+  let classProbs = [0.33, 0.33, 0.34];
+  let classTarget = [0.33, 0.33, 0.34];
+
+  function newClassification() {
+    const winner = Math.floor(Math.random() * 3);
+    classTarget = classLabels.map((_, i) => i === winner ? 0.7 + Math.random() * 0.25 : 0.02 + Math.random() * 0.12);
+    const sum = classTarget.reduce((a, b) => a + b, 0);
+    classTarget = classTarget.map(v => v / sum);
+  }
+
+  /* ── Layout calculation ── */
+  function getLayerPositions(s) {
+    const padL = 50 * s, padR = 50 * s;
+    const usableW = W - padL - padR;
+    const positions = [];
+    for (let i = 0; i < LAYERS.length; i++) {
+      positions.push({
+        x: padL + (usableW * i / (LAYERS.length - 1)),
+        layer: LAYERS[i],
+      });
+    }
+    return positions;
+  }
+
+  /* ── Draw ── */
+  let inferenceCount = 0;
+
+  function draw(ts) {
+    if (!draw.start) draw.start = ts;
+    const t = (ts - draw.start) / 1000;
+    const dt = draw.lastT ? Math.min((ts - draw.lastT) / 1000, 0.05) : 0.016;
+    draw.lastT = ts;
+    const s = S(W);
+
+    ctx.clearRect(0, 0, W, H);
+
+    const cycleT = t % totalCycle;
+    const scanning = cycleT < scanDuration;
+    const scanProgress = scanning ? cycleT / scanDuration : 1;
+
+    // On new cycle, regenerate
+    const cycleNum = Math.floor(t / totalCycle);
+    if (cycleNum !== draw.lastCycle) {
+      draw.lastCycle = cycleNum;
+      generateMaps();
+      newClassification();
+      inferenceCount++;
+    }
+
+    // Lerp feature maps toward targets based on scan progress
+    const activeLayerFrac = scanProgress * LAYERS.length;
+    for (let li = 0; li < LAYERS.length; li++) {
+      const layerProgress = Math.max(0, Math.min(1, activeLayerFrac - li));
+      for (let m = 0; m < featureMaps[li].length; m++) {
+        for (let r = 0; r < featureMaps[li][m].length; r++) {
+          for (let c = 0; c < featureMaps[li][m][r].length; c++) {
+            const target = targetMaps[li][m][r][c] * layerProgress;
+            featureMaps[li][m][r][c] += (target - featureMaps[li][m][r][c]) * Math.min(1, dt * 6);
+          }
+        }
+      }
+    }
+
+    // Lerp class probs
+    for (let i = 0; i < classProbs.length; i++) {
+      const target = scanProgress > 0.9 ? classTarget[i] : 0.33;
+      classProbs[i] += (target - classProbs[i]) * dt * 3;
+    }
+
+    const positions = getLayerPositions(s);
+    const midY = H / 2;
+
+    // Draw connections between layers (flow arrows)
+    for (let i = 0; i < positions.length - 1; i++) {
+      const fromX = positions[i].x;
+      const toX = positions[i + 1].x;
+      const midX = (fromX + toX) / 2;
+      const layerActive = activeLayerFrac > i;
+      const alpha = layerActive ? 0.15 + 0.15 * Math.min(1, activeLayerFrac - i) : 0.05;
+
+      // Connection lines
+      ctx.strokeStyle = `rgba(88,166,255,${alpha})`;
+      ctx.lineWidth = 1 * s;
+      const numLines = mobile ? 3 : 5;
+      for (let l = 0; l < numLines; l++) {
+        const yOff = (l - (numLines - 1) / 2) * 15 * s;
+        ctx.beginPath();
+        ctx.moveTo(fromX + 20 * s, midY + yOff);
+        ctx.quadraticCurveTo(midX, midY + yOff * 0.5, toX - 20 * s, midY + yOff);
+        ctx.stroke();
+      }
+
+      // Flow particles
+      if (layerActive) {
+        const particleCount = mobile ? 2 : 3;
+        for (let p = 0; p < particleCount; p++) {
+          const pt = ((t * 0.8 + p * 0.33 + i * 0.17) % 1);
+          const yOff = (Math.sin(t * 2 + p + i) * 10) * s;
+          const px = fromX + 20 * s + (toX - fromX - 40 * s) * pt;
+          const py = midY + yOff;
+          glow(px, py, 6 * s, hexAlpha(positions[i].layer.color, 0.3));
+          ctx.beginPath(); ctx.arc(px, py, 2 * s, 0, Math.PI * 2);
+          ctx.fillStyle = positions[i].layer.color; ctx.fill();
+        }
+      }
+    }
+
+    // Draw each layer's feature maps
+    for (let li = 0; li < LAYERS.length; li++) {
+      const layer = LAYERS[li];
+      const pos = positions[li];
+      const layerProgress = Math.max(0, Math.min(1, activeLayerFrac - li));
+
+      if (layer.type === 'fc' || layer.type === 'output') {
+        // Draw as vertical column of circles
+        const nodeCount = layer.maps;
+        const spacing = Math.min(25 * s, (H * 0.5) / nodeCount);
+        const startY = midY - (nodeCount - 1) * spacing / 2;
+
+        for (let n = 0; n < nodeCount; n++) {
+          const ny = startY + n * spacing;
+          const activation = featureMaps[li][n][0][0];
+          const r = Math.max(4, 7 * s);
+
+          if (activation > 0.1) {
+            glow(pos.x, ny, r * 4 * activation, hexAlpha(layer.color, 0.25));
+          }
+
+          ctx.beginPath(); ctx.arc(pos.x, ny, r, 0, Math.PI * 2);
+          ctx.fillStyle = layer.color;
+          ctx.globalAlpha = 0.15 + activation * 0.85;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      } else {
+        // Draw as stacked grids (feature maps)
+        const cellSize = Math.max(3, Math.min(12, 50 / layer.gridSize) * s);
+        const mapW = layer.gridSize * cellSize;
+        const mapH = layer.gridSize * cellSize;
+        const mapGap = mobile ? 3 * s : 5 * s;
+        const totalH = layer.maps * (mapH + mapGap) - mapGap;
+        const startY = midY - totalH / 2;
+
+        for (let m = 0; m < layer.maps; m++) {
+          const mapY = startY + m * (mapH + mapGap);
+          const mapX = pos.x - mapW / 2;
+
+          // Map border
+          ctx.strokeStyle = T.border;
+          ctx.lineWidth = 0.5;
+          ctx.globalAlpha = 0.3 + layerProgress * 0.4;
+          ctx.strokeRect(mapX, mapY, mapW, mapH);
+          ctx.globalAlpha = 1;
+
+          // Cells
+          for (let r = 0; r < layer.gridSize; r++) {
+            for (let c = 0; c < layer.gridSize; c++) {
+              const val = featureMaps[li][m][r][c];
+              if (val < 0.02) continue;
+
+              const cx = mapX + c * cellSize;
+              const cy = mapY + r * cellSize;
+
+              ctx.fillStyle = layer.color;
+              ctx.globalAlpha = val * 0.9;
+              ctx.fillRect(cx, cy, cellSize - 0.5, cellSize - 0.5);
+              ctx.globalAlpha = 1;
+            }
+          }
+        }
+
+        // Scanning kernel indicator (3x3 box that moves across active layer)
+        if (layer.type === 'conv' && layerProgress > 0 && layerProgress < 1) {
+          const kernelSize = Math.min(3, layer.gridSize);
+          const kernelCellSize = cellSize;
+          const totalPositions = layer.gridSize - kernelSize + 1;
+          const kernelPos = Math.floor((layerProgress * totalPositions * totalPositions) % (totalPositions * totalPositions));
+          const kr = Math.floor(kernelPos / totalPositions);
+          const kc = kernelPos % totalPositions;
+
+          const firstMapY = startY;
+          const kx = pos.x - mapW / 2 + kc * kernelCellSize;
+          const ky = firstMapY + kr * kernelCellSize;
+          const kw = kernelSize * kernelCellSize;
+          const kh = kernelSize * kernelCellSize;
+
+          ctx.strokeStyle = T.amber; ctx.lineWidth = 1.5 * s;
+          ctx.setLineDash([3 * s, 3 * s]);
+          ctx.strokeRect(kx, ky, kw, kh);
+          ctx.setLineDash([]);
+
+          // Kernel glow
+          glow(kx + kw / 2, ky + kh / 2, 15 * s, T.amberGlow);
+        }
+      }
+
+      // Layer label
+      ctx.font = `500 ${Math.max(7, 8 * s)}px 'IBM Plex Mono', monospace`;
+      ctx.fillStyle = layerProgress > 0.1 ? layer.color : T.textMut;
+      ctx.textAlign = 'center';
+      ctx.fillText(layer.label, pos.x, H - 14 * s);
+    }
+
+    // Scan beam
+    if (scanning) {
+      const beamX = positions[0].x + scanProgress * (positions[positions.length - 1].x - positions[0].x);
+      ctx.strokeStyle = T.amber; ctx.lineWidth = 1 * s;
+      ctx.globalAlpha = 0.3 + Math.sin(t * 6) * 0.15;
+      ctx.beginPath(); ctx.moveTo(beamX, 30 * s); ctx.lineTo(beamX, H - 30 * s);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // Beam glow
+      glow(beamX, midY, 30 * s, 'rgba(210,153,34,0.06)');
+    }
+
+    // Classification output panel (appears when scan is >80%)
+    if (scanProgress > 0.8) {
+      const panelW = 120 * s;
+      const panelH = 65 * s;
+      const panelX = W - panelW - 10 * s;
+      const panelY = 10 * s;
+      const panelAlpha = Math.min(1, (scanProgress - 0.8) / 0.2);
+
+      ctx.globalAlpha = panelAlpha;
+
+      ctx.fillStyle = T.surface; ctx.globalAlpha = panelAlpha * 0.9;
+      ctx.beginPath(); ctx.roundRect(panelX, panelY, panelW, panelH, 5 * s); ctx.fill();
+      ctx.globalAlpha = panelAlpha;
+      ctx.strokeStyle = T.amber; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.roundRect(panelX, panelY, panelW, panelH, 5 * s); ctx.stroke();
+
+      ctx.font = `600 ${Math.max(7, 8 * s)}px 'IBM Plex Mono', monospace`;
+      ctx.fillStyle = T.textMut; ctx.textAlign = 'left';
+      ctx.fillText('CLASSIFICATION', panelX + 6 * s, panelY + 13 * s);
+
+      const maxProb = Math.max(...classProbs);
+      for (let i = 0; i < 3; i++) {
+        const by = panelY + 22 * s + i * 14 * s;
+        const isWin = Math.abs(classProbs[i] - maxProb) < 0.01;
+
+        ctx.font = `400 ${Math.max(6, 7 * s)}px 'IBM Plex Mono', monospace`;
+        ctx.fillStyle = isWin ? T.amber : T.textMut; ctx.textAlign = 'left';
+        ctx.fillText(classLabels[i], panelX + 6 * s, by + 4 * s);
+
+        // Bar
+        const barX = panelX + 40 * s;
+        const barW = panelW - 72 * s;
+        ctx.fillStyle = T.border;
+        ctx.fillRect(barX, by - 1 * s, barW, 5 * s);
+        ctx.fillStyle = isWin ? T.amber : T.blue;
+        ctx.fillRect(barX, by - 1 * s, barW * classProbs[i], 5 * s);
+
+        ctx.textAlign = 'right';
+        ctx.fillStyle = isWin ? T.amber : T.textSec;
+        ctx.fillText((classProbs[i] * 100).toFixed(0) + '%', panelX + panelW - 5 * s, by + 4 * s);
+      }
+
+      ctx.globalAlpha = 1;
+    }
+
+    // Status top-left
+    ctx.font = `500 ${Math.max(8, 10 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = T.textMut; ctx.textAlign = 'left';
+    ctx.fillText('CONVOLUTIONAL NETWORK', 28 * s, 18 * s);
+    const dotOn = Math.sin(t * 4) > 0;
+    ctx.beginPath(); ctx.arc(14 * s, 15 * s, Math.max(3, 4 * s), 0, Math.PI * 2);
+    ctx.fillStyle = dotOn ? T.green : T.textMut; ctx.fill();
+
+    // Inference counter
+    ctx.font = `400 ${Math.max(7, 8 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = T.textMut;
+    ctx.fillText(`INFERENCE #${inferenceCount}`, 28 * s, 32 * s);
+
+    // Scanning progress
+    if (scanning) {
+      const barW = 60 * s, barH = 3 * s;
+      const barX = W - 10 * s - barW;
+      ctx.font = `400 ${Math.max(7, 8 * s)}px 'IBM Plex Mono', monospace`;
+      ctx.fillStyle = T.textMut; ctx.textAlign = 'right';
+      ctx.fillText(`${(scanProgress * 100).toFixed(0)}%`, W - 10 * s, H - 30 * s);
+      ctx.fillStyle = T.border;
+      ctx.fillRect(barX, H - 25 * s, barW, barH);
+      ctx.fillStyle = T.amber;
+      ctx.fillRect(barX, H - 25 * s, barW * scanProgress, barH);
+    }
+
+    requestAnimationFrame(draw);
+  }
+  draw.lastCycle = -1;
+
+  resize();
+  window.addEventListener('resize', resize);
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

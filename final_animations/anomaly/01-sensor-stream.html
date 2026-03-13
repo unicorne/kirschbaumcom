@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anomaly Detection — Sensor Stream</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #08090d;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; overflow: hidden;
+    font-family: 'IBM Plex Mono', -apple-system, monospace;
+  }
+  .wrap { width: 94vw; max-width: 900px; }
+  canvas { display: block; width: 100%; height: 340px; border-radius: 8px; background: #0d1117; }
+  .meta {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 2px; color: #484f58; font-size: 10px; letter-spacing: 0.1em;
+  }
+  .meta span { color: #58a6ff; }
+  @media (max-width: 600px) { canvas { height: 260px; } }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="wrap">
+  <div class="meta">
+    <div>ANOMALY DETECTION <span>/ SENSOR STREAM</span></div>
+    <div>EXAMPLE 01</div>
+  </div>
+  <canvas id="c"></canvas>
+</div>
+
+<script>
+(() => {
+  const T = {
+    void: '#08090d', bg: '#0d1117', surface: '#161b22',
+    border: '#21262d', borderLight: '#30363d',
+    blue: '#58a6ff', blueGlow: 'rgba(88,166,255,0.35)', blueDim: 'rgba(88,166,255,0.08)',
+    cyan: '#39d2c0', cyanGlow: 'rgba(57,210,192,0.35)',
+    green: '#3fb950', greenGlow: 'rgba(63,185,80,0.3)',
+    red: '#f85149', redGlow: 'rgba(248,81,73,0.4)',
+    amber: '#d29922',
+    text: '#e6edf3', textSec: '#8b949e', textMut: '#484f58',
+  };
+  // --- Color override via postMessage ---
+  function _hexToRgb(h){h=h.replace("#","");return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+  function _rgba(hex,a){const[r,g,b]=_hexToRgb(hex);return "rgba("+r+","+g+","+b+","+a+")";}
+  window.addEventListener("message",function(e){
+    if(e.data&&e.data.type==="theme"){
+      var c=e.data.colors;
+      if(c.blue){T.blue=c.blue;T.blueGlow=_rgba(c.blue,0.35);T.blueDim=_rgba(c.blue,0.08);}
+      if(c.cyan){T.cyan=c.cyan;T.cyanGlow=_rgba(c.cyan,0.35);T.cyanDim=_rgba(c.cyan,0.08);}
+      if(c.green){T.green=c.green;T.greenGlow=_rgba(c.green,0.3);T.greenDim=_rgba(c.green,0.08);}
+      if(c.red){T.red=c.red;T.redGlow=_rgba(c.red,0.4);}
+      if(c.amber){T.amber=c.amber;T.amberGlow=_rgba(c.amber,0.3);T.amberDim=_rgba(c.amber,0.08);}
+      if(c.purple){T.purple=c.purple;T.purpleGlow=_rgba(c.purple,0.3);T.purpleDim=_rgba(c.purple,0.08);}
+      if(c.bg){T.bg=c.bg;var cv=document.querySelector("canvas");if(cv)cv.style.background=c.bg;}
+      if(c.void){T.void=c.void;document.body.style.background=c.void;}
+      if(c.surface)T.surface=c.surface;
+      if(c.border)T.border=c.border;
+      if(c.borderLight)T.borderLight=c.borderLight;
+      if(c.text)T.text=c.text;
+      if(c.textSec)T.textSec=c.textSec;
+      if(c.textMut){T.textMut=c.textMut;var m=document.querySelector(".meta");if(m)m.style.color=c.textMut;}
+    }
+  });
+
+  let mobile = window.innerWidth < 600;
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    mobile = window.innerWidth < 600;
+    const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 2 : 3);
+    const r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function S(w) { return Math.max(0.45, w / 600); }
+  function shadow(c, b) { if (!mobile) { ctx.shadowColor = c; ctx.shadowBlur = b; } }
+  function drawGlow(x, y, r, c) {
+    if (mobile) r *= 0.6;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, c); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+
+  /* ── Static function graph with a single anomaly ── */
+  // Pre-generate the signal data (fixed, not scrolling)
+  const NUM_POINTS = 600;
+  const signalData = new Float32Array(NUM_POINTS);
+  // Anomaly location: one spike somewhere in the right half
+  const anomalyCenter = Math.floor(NUM_POINTS * (0.55 + Math.random() * 0.2));
+  const anomalyWidth = 12;
+
+  for (let i = 0; i < NUM_POINTS; i++) {
+    // Realistic-looking signal: mix of low-freq drift + medium noise + fine jitter
+    const x = i / NUM_POINTS;
+    let v = Math.sin(x * 6.2) * 0.25            // slow drift
+          + Math.sin(x * 14.7 + 0.8) * 0.15     // medium oscillation
+          + Math.sin(x * 31.4 + 2.1) * 0.08      // faster wobble
+          + (Math.random() - 0.5) * 0.06;         // fine noise
+
+    // Add anomaly spike
+    const dist = Math.abs(i - anomalyCenter);
+    if (dist < anomalyWidth) {
+      const p = 1 - dist / anomalyWidth;
+      v += Math.pow(p, 1.5) * 1.2;
+    }
+    signalData[i] = v;
+  }
+
+  // Smooth the noise slightly for realism
+  for (let pass = 0; pass < 2; pass++) {
+    for (let i = 1; i < NUM_POINTS - 1; i++) {
+      // Don't smooth the anomaly peak itself too much
+      const dist = Math.abs(i - anomalyCenter);
+      if (dist < anomalyWidth + 3) continue;
+      signalData[i] = signalData[i] * 0.6 + (signalData[i-1] + signalData[i+1]) * 0.2;
+    }
+  }
+
+  // Scanner state
+  const scanDuration = 6;   // seconds for one L→R sweep
+  const resetPause = 1.5;   // seconds pause at end before restart
+  const totalCycle = scanDuration + resetPause;
+
+  function draw(ts) {
+    if (!draw.start) draw.start = ts;
+    const t = (ts - draw.start) / 1000;
+    const s = S(W);
+    ctx.clearRect(0, 0, W, H);
+
+    const padL = 50 * s, padR = 20 * s, padT = 35 * s, padB = 35 * s;
+    const graphW = W - padL - padR;
+    const graphH = H - padT - padB;
+    const midY = padT + graphH * 0.45;
+    const amp = graphH * 0.35;
+    const step = mobile ? 3 : 1.5;
+
+    // Grid
+    ctx.strokeStyle = T.border; ctx.lineWidth = 0.5;
+    ctx.globalAlpha = mobile ? 0.2 : 0.35;
+    const gsp = 40 * s;
+    for (let y = padT; y <= padT + graphH; y += gsp) {
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+    }
+    if (!mobile) {
+      for (let x = padL; x <= W - padR; x += gsp) {
+        ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + graphH); ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // Normal range band
+    ctx.fillStyle = T.blueDim;
+    const bandTop = midY - amp * 0.65, bandBot = midY + amp * 0.65;
+    ctx.fillRect(padL, bandTop, graphW, bandBot - bandTop);
+    ctx.font = `400 ${Math.max(7, 8 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = T.textMut; ctx.textAlign = 'right';
+    ctx.fillText('NORMAL RANGE', W - padR - 4 * s, bandTop - 4 * s);
+
+    // Y-axis labels
+    ctx.textAlign = 'right';
+    ctx.fillStyle = T.textMut;
+    ctx.font = `400 ${Math.max(7, 8 * s)}px 'IBM Plex Mono', monospace`;
+    const yLabels = ['+2σ', '+1σ', '0', '-1σ', '-2σ'];
+    for (let i = 0; i < yLabels.length; i++) {
+      const y = padT + (graphH * i) / (yLabels.length - 1);
+      ctx.fillText(yLabels[i], padL - 6 * s, y + 3 * s);
+    }
+
+    // Scanner logic — continuous sweep using modulo, never stops
+    const cycleTime = t % totalCycle;
+    const sweeping = cycleTime < scanDuration;
+    const scanProgress = sweeping ? cycleTime / scanDuration : 1; // 0→1
+    const scanX = scanProgress * NUM_POINTS; // data-space position
+
+    const scanScreenX = padL + scanProgress * graphW;
+    const anomalyDetected = scanX >= anomalyCenter;
+    // How long ago (within this cycle) the scanner passed the anomaly
+    const anomalyHitTime = (anomalyCenter / NUM_POINTS) * scanDuration;
+    const anomalyAge = anomalyDetected ? cycleTime - anomalyHitTime : 0;
+
+    // Draw the signal line — only up to scanner position (scanned region)
+    const maxDataIdx = Math.min(Math.floor(scanX), NUM_POINTS - 1);
+
+    // Scanned portion: draw cyan, switch to red near anomaly
+    ctx.lineWidth = 2 * s;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+
+    // First pass: cyan (normal)
+    ctx.beginPath();
+    ctx.strokeStyle = T.cyan;
+    shadow(T.cyanGlow, 6 * s);
+    let startedRed = false;
+    for (let i = 0; i <= maxDataIdx; i++) {
+      const px = padL + (i / NUM_POINTS) * graphW;
+      const py = midY - signalData[i] * amp;
+      const nearAnomaly = Math.abs(i - anomalyCenter) < anomalyWidth + 3;
+      if (nearAnomaly && anomalyDetected) {
+        if (!startedRed) { ctx.stroke(); startedRed = true; }
+        continue;
+      }
+      if (i === 0 || startedRed) { ctx.moveTo(px, py); startedRed = false; }
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Second pass: red for anomaly region (only if scanner has passed it)
+    if (anomalyDetected) {
+      ctx.beginPath();
+      ctx.strokeStyle = T.red; ctx.lineWidth = 2.5 * s;
+      shadow(T.redGlow, 10 * s);
+      let first = true;
+      for (let i = Math.max(0, anomalyCenter - anomalyWidth - 3); i <= Math.min(maxDataIdx, anomalyCenter + anomalyWidth + 3); i++) {
+        const px = padL + (i / NUM_POINTS) * graphW;
+        const py = midY - signalData[i] * amp;
+        if (first) { ctx.moveTo(px, py); first = false; }
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    // Unscanned portion: dim/ghosted
+    if (maxDataIdx < NUM_POINTS - 1) {
+      ctx.beginPath();
+      ctx.strokeStyle = T.textMut; ctx.lineWidth = 1 * s;
+      ctx.globalAlpha = 0.15;
+      for (let i = maxDataIdx; i < NUM_POINTS; i++) {
+        const px = padL + (i / NUM_POINTS) * graphW;
+        const py = midY - signalData[i] * amp;
+        if (i === maxDataIdx) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // Scanner beam — vertical line with glow
+    const beamX = scanScreenX;
+    // Briefly flash red when passing through anomaly, otherwise cyan
+    const nearAnomNow = anomalyDetected && anomalyAge < 0.5;
+    const scanColor = nearAnomNow ? T.red : T.cyan;
+    const scanGlow = nearAnomNow ? T.redGlow : T.cyanGlow;
+
+    ctx.strokeStyle = scanColor; ctx.lineWidth = 1.5 * s;
+    ctx.globalAlpha = 0.8;
+    ctx.beginPath(); ctx.moveTo(beamX, padT); ctx.lineTo(beamX, padT + graphH); ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Scanner field — a semi-transparent rectangle behind the beam
+    const fieldW = 30 * s;
+    const grad = ctx.createLinearGradient(beamX - fieldW, 0, beamX, 0);
+    grad.addColorStop(0, 'transparent');
+    grad.addColorStop(1, nearAnomNow ? 'rgba(248,81,73,0.08)' : 'rgba(57,210,192,0.06)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(beamX - fieldW, padT, fieldW, graphH);
+
+    // Scanner glow at beam position
+    drawGlow(beamX, midY, 40 * s, scanGlow);
+
+    // "SCANNING..." or "SCAN" label on the beam
+    ctx.font = `500 ${Math.max(7, 8 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = scanColor; ctx.textAlign = 'center';
+    ctx.globalAlpha = 0.7 + Math.sin(t * 6) * 0.3;
+    if (sweeping) {
+      ctx.fillText('SCAN', beamX, padT - 8 * s);
+    }
+    ctx.globalAlpha = 1;
+
+    // Small triangle at top of beam
+    ctx.beginPath();
+    ctx.moveTo(beamX, padT); ctx.lineTo(beamX - 4 * s, padT - 4 * s); ctx.lineTo(beamX + 4 * s, padT - 4 * s);
+    ctx.closePath(); ctx.fillStyle = scanColor; ctx.fill();
+
+    // Anomaly detection visuals — persist after detection, fade out near end of cycle
+    if (anomalyDetected) {
+      const age = anomalyAge;
+      const anomScreenX = padL + (anomalyCenter / NUM_POINTS) * graphW;
+      const anomScreenY = midY - signalData[anomalyCenter] * amp;
+
+      // Pulsing red glow at anomaly peak
+      const pulse = 0.5 + Math.sin(t * 5) * 0.5;
+      drawGlow(anomScreenX, anomScreenY, (25 + pulse * 15) * s, T.redGlow);
+
+      // Expanding ring (on first detection)
+      if (age < 2) {
+        const ringR = 5 * s + age * 25 * s;
+        ctx.beginPath(); ctx.arc(anomScreenX, anomScreenY, ringR, 0, Math.PI * 2);
+        ctx.strokeStyle = T.red; ctx.lineWidth = 1.5;
+        ctx.globalAlpha = Math.max(0, 1 - age / 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      // Dashed bounding box around anomaly
+      const bw = (anomalyWidth * 2 + 10) * (graphW / NUM_POINTS);
+      const peakVal = signalData[anomalyCenter];
+      const bx = anomScreenX - bw / 2;
+      const by = midY - (peakVal + 0.3) * amp;
+      const bh = (peakVal + 0.8) * amp;
+      ctx.strokeStyle = T.red; ctx.lineWidth = 1.2 * s;
+      ctx.setLineDash([4 * s, 4 * s]);
+      ctx.globalAlpha = 0.6 + Math.sin(t * 4) * 0.3;
+      ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 3 * s); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+
+      // Confidence badge
+      const conf = Math.min(0.99, 0.85 + age * 0.04).toFixed(2);
+      const badgeW = 120 * s, badgeH = 40 * s;
+      const badgeX = anomScreenX - badgeW / 2;
+      const badgeY = by - badgeH - 10 * s;
+
+      // Clamp badge fully inside canvas
+      const clampedBadgeX = Math.max(padL, Math.min(W - padR - badgeW, badgeX));
+      const clampedBadgeY = Math.max(4 * s, Math.min(padT + graphH - badgeH, badgeY));
+
+      ctx.fillStyle = T.surface; ctx.globalAlpha = 0.92;
+      ctx.beginPath(); ctx.roundRect(clampedBadgeX, clampedBadgeY, badgeW, badgeH, 5 * s); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = T.red; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.roundRect(clampedBadgeX, clampedBadgeY, badgeW, badgeH, 5 * s); ctx.stroke();
+
+      // Badge text
+      const fs1 = Math.max(9, 11 * s);
+      const fs2 = Math.max(7, 8 * s);
+      ctx.font = `600 ${fs1}px 'IBM Plex Mono', monospace`;
+      ctx.fillStyle = T.red; ctx.textAlign = 'center';
+      ctx.fillText('ANOMALY', clampedBadgeX + badgeW / 2, clampedBadgeY + 16 * s);
+      ctx.font = `400 ${fs2}px 'IBM Plex Mono', monospace`;
+      ctx.fillStyle = T.textSec;
+      ctx.fillText(`confidence: ${conf}`, clampedBadgeX + badgeW / 2, clampedBadgeY + 30 * s);
+
+      // Connecting line from badge to anomaly
+      ctx.strokeStyle = T.red; ctx.lineWidth = 0.8;
+      ctx.globalAlpha = 0.4;
+      ctx.setLineDash([2, 3]);
+      ctx.beginPath();
+      ctx.moveTo(clampedBadgeX + badgeW / 2, clampedBadgeY + badgeH);
+      ctx.lineTo(anomScreenX, anomScreenY - 6 * s);
+      ctx.stroke();
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+
+    // Status top-left
+    ctx.font = `500 ${Math.max(8, 10 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = T.textMut; ctx.textAlign = 'left';
+    ctx.fillText('SENSOR STREAM', 28 * s, 18 * s);
+    const dotOn = Math.sin(t * 4) > 0;
+    ctx.beginPath(); ctx.arc(14 * s, 15 * s, Math.max(3, 4 * s), 0, Math.PI * 2);
+    ctx.fillStyle = dotOn ? T.green : T.textMut; ctx.fill();
+
+    // Scan progress indicator top-right
+    const progress = scanProgress;
+    ctx.font = `400 ${Math.max(7, 8 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = T.textMut; ctx.textAlign = 'right';
+    ctx.fillText(`SCAN ${(progress * 100).toFixed(0)}%`, W - 10 * s, 18 * s);
+
+    // Progress bar
+    const barW = 60 * s, barH = 3 * s;
+    const barX = W - 10 * s - barW, barY = 23 * s;
+    ctx.fillStyle = T.border;
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = anomalyDetected ? T.red : T.cyan;
+    ctx.fillRect(barX, barY, barW * progress, barH);
+
+    // Flow arrows at bottom
+    ctx.font = `400 ${Math.max(8, 9 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = T.textMut; ctx.textAlign = 'center';
+    const arrowY = H - 8 * s;
+    const arrowCount = mobile ? 4 : 7;
+    const arrowSp = graphW / arrowCount;
+    for (let i = 0; i < arrowCount; i++) {
+      const ax = padL + i * arrowSp + ((t * 25) % arrowSp);
+      ctx.globalAlpha = Math.sin(((ax - padL) / graphW) * Math.PI) * 0.4;
+      ctx.fillText('→', ax, arrowY);
+    }
+    ctx.globalAlpha = 1;
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anomaly Detection — Data Pipeline</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #08090d;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; overflow: hidden;
+    font-family: 'IBM Plex Mono', -apple-system, monospace;
+  }
+  .wrap { width: 94vw; max-width: 900px; }
+  canvas { display: block; width: 100%; height: 340px; border-radius: 8px; background: #0d1117; }
+  .meta {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 2px; color: #484f58; font-size: 10px; letter-spacing: 0.1em;
+  }
+  .meta span { color: #58a6ff; }
+  @media (max-width: 600px) { canvas { height: 280px; } }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="wrap">
+  <div class="meta">
+    <div>ANOMALY DETECTION <span>/ DATA PIPELINE</span></div>
+    <div>EXAMPLE 02</div>
+  </div>
+  <canvas id="c"></canvas>
+</div>
+
+<script>
+(() => {
+  const T = {
+    void: '#08090d', bg: '#0d1117', surface: '#161b22',
+    border: '#21262d', borderLight: '#30363d',
+    blue: '#58a6ff', blueGlow: 'rgba(88,166,255,0.35)', blueDim: 'rgba(88,166,255,0.08)',
+    cyan: '#39d2c0', cyanGlow: 'rgba(57,210,192,0.35)',
+    green: '#3fb950', greenGlow: 'rgba(63,185,80,0.3)',
+    red: '#f85149', redGlow: 'rgba(248,81,73,0.4)',
+    amber: '#d29922', amberGlow: 'rgba(210,153,34,0.3)',
+    text: '#e6edf3', textSec: '#8b949e', textMut: '#484f58',
+  };
+  // --- Color override via postMessage ---
+  function _hexToRgb(h){h=h.replace("#","");return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+  function _rgba(hex,a){const[r,g,b]=_hexToRgb(hex);return "rgba("+r+","+g+","+b+","+a+")";}
+  window.addEventListener("message",function(e){
+    if(e.data&&e.data.type==="theme"){
+      var c=e.data.colors;
+      if(c.blue){T.blue=c.blue;T.blueGlow=_rgba(c.blue,0.35);T.blueDim=_rgba(c.blue,0.08);}
+      if(c.cyan){T.cyan=c.cyan;T.cyanGlow=_rgba(c.cyan,0.35);T.cyanDim=_rgba(c.cyan,0.08);}
+      if(c.green){T.green=c.green;T.greenGlow=_rgba(c.green,0.3);T.greenDim=_rgba(c.green,0.08);}
+      if(c.red){T.red=c.red;T.redGlow=_rgba(c.red,0.4);}
+      if(c.amber){T.amber=c.amber;T.amberGlow=_rgba(c.amber,0.3);T.amberDim=_rgba(c.amber,0.08);}
+      if(c.purple){T.purple=c.purple;T.purpleGlow=_rgba(c.purple,0.3);T.purpleDim=_rgba(c.purple,0.08);}
+      if(c.bg){T.bg=c.bg;var cv=document.querySelector("canvas");if(cv)cv.style.background=c.bg;}
+      if(c.void){T.void=c.void;document.body.style.background=c.void;}
+      if(c.surface)T.surface=c.surface;
+      if(c.border)T.border=c.border;
+      if(c.borderLight)T.borderLight=c.borderLight;
+      if(c.text)T.text=c.text;
+      if(c.textSec)T.textSec=c.textSec;
+      if(c.textMut){T.textMut=c.textMut;var m=document.querySelector(".meta");if(m)m.style.color=c.textMut;}
+    }
+  });
+
+  let mobile = window.innerWidth < 600;
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    mobile = window.innerWidth < 600;
+    const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 2 : 3);
+    const r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function S(w) { return Math.max(0.45, w / 600); }
+  function shadow(c, b) { if (!mobile) { ctx.shadowColor = c; ctx.shadowBlur = b; } }
+  function glow(x, y, r, c) {
+    if (mobile) r *= 0.65;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, c); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+
+  /* ── Draw a triangle (pointing right for normal, rotated for anomaly) ── */
+  function drawTriangle(x, y, r, color, glowColor, rotation) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation || 0);
+    shadow(glowColor, 8);
+    ctx.beginPath();
+    ctx.moveTo(r, 0);
+    ctx.lineTo(-r * 0.6, -r * 0.7);
+    ctx.lineTo(-r * 0.6, r * 0.7);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+
+  /* ── Draw a circle (for normal packets) ── */
+  function drawCircle(x, y, r, color, glowColor) {
+    shadow(glowColor, 8);
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  /* ── Pipeline stages ── */
+  const STAGES = [
+    { label: 'INGEST', icon: '⟶' },
+    { label: 'PARSE', icon: '{ }' },
+    { label: 'VALIDATE', icon: '✓' },
+    { label: 'SCORE', icon: 'ML' },
+    { label: 'ROUTE', icon: '⑂' },
+  ];
+  const STAGES_M = [
+    { label: 'IN', icon: '⟶' },
+    { label: 'PARSE', icon: '{ }' },
+    { label: 'ML', icon: 'ML' },
+    { label: 'OUT', icon: '⑂' },
+  ];
+
+  /* ── Packets ── */
+  const packets = [];
+  let lastSpawn = 0;
+
+  function spawnPacket(t) {
+    const isAnomaly = Math.random() < 0.18;
+    packets.push({
+      progress: 0,
+      speed: 0.25 + Math.random() * 0.12,
+      anomaly: isAnomaly,
+      detected: false,
+      detectedAt: -1,
+      lane: Math.floor(Math.random() * 3),
+      born: t,
+    });
+  }
+
+  function draw(ts) {
+    if (!draw.start) draw.start = ts;
+    const t = (ts - draw.start) / 1000;
+    const s = S(W);
+    ctx.clearRect(0, 0, W, H);
+
+    const stages = mobile ? STAGES_M : STAGES;
+    const stageCount = stages.length;
+    const padX = 40 * s;
+    const padY = 30 * s;
+    const laneH = (H - padY * 2 - 50 * s) / 3;
+    const stageW = (W - padX * 2) / (stageCount - 1);
+
+    // Grid — horizontal only
+    ctx.strokeStyle = T.border; ctx.lineWidth = 0.5; ctx.globalAlpha = 0.3;
+    const gsp = 50 * s;
+    for (let y = 0; y < H; y += gsp) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+
+    // Stage columns (vertical dashed)
+    for (let i = 0; i < stageCount; i++) {
+      const sx = padX + i * stageW;
+      ctx.strokeStyle = T.border; ctx.lineWidth = 1;
+      ctx.setLineDash([3 * s, 5 * s]);
+      ctx.beginPath(); ctx.moveTo(sx, padY); ctx.lineTo(sx, H - 45 * s); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Stage labels at bottom
+    ctx.font = `600 ${Math.max(9, 10 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.textAlign = 'center';
+    for (let i = 0; i < stageCount; i++) {
+      const sx = padX + i * stageW;
+      const ny = H - 28 * s;
+      ctx.beginPath(); ctx.arc(sx, ny, 12 * s, 0, Math.PI * 2);
+      ctx.fillStyle = T.surface; ctx.fill();
+      ctx.strokeStyle = T.borderLight; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = T.textSec;
+      ctx.fillText(stages[i].icon, sx, ny + 4 * s);
+      ctx.font = `500 ${Math.max(7, 8 * s)}px 'IBM Plex Mono', monospace`;
+      ctx.fillStyle = T.textMut;
+      ctx.fillText(stages[i].label, sx, H - 8 * s);
+      ctx.font = `600 ${Math.max(9, 10 * s)}px 'IBM Plex Mono', monospace`;
+    }
+
+    // Connection arrows between stage nodes
+    for (let i = 0; i < stageCount - 1; i++) {
+      const x1 = padX + i * stageW + 14 * s;
+      const x2 = padX + (i + 1) * stageW - 14 * s;
+      const ny = H - 28 * s;
+      ctx.strokeStyle = T.border; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x1, ny); ctx.lineTo(x2, ny); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x2, ny); ctx.lineTo(x2 - 4 * s, ny - 3 * s); ctx.lineTo(x2 - 4 * s, ny + 3 * s); ctx.closePath();
+      ctx.fillStyle = T.border; ctx.fill();
+    }
+
+    // Spawn packets
+    const spawnInterval = mobile ? 0.6 : 0.4;
+    if (t - lastSpawn > spawnInterval) { lastSpawn = t; spawnPacket(t); }
+
+    // Update & draw packets
+    const dt = 0.016;
+    const kept = [];
+    const detectStageIdx = mobile ? 2 : 3;
+
+    for (const p of packets) {
+      p.progress += p.speed * dt;
+      if (p.progress > 1.15) continue;
+      kept.push(p);
+
+      const px = padX + p.progress * (W - padX * 2);
+      const laneY = padY + 20 * s + p.lane * laneH;
+
+      // Check if packet passes detection stage
+      const detectX = padX + detectStageIdx * stageW;
+      if (p.anomaly && !p.detected && px >= detectX - 10 * s) {
+        p.detected = true;
+        p.detectedAt = t;
+      }
+
+      const isRed = p.anomaly && p.detected;
+      const isPreDetect = p.anomaly && !p.detected;
+      const dotR = Math.max(3, (p.anomaly ? 6 : 4) * s);
+      const color = isRed ? T.red : T.cyan;
+      const glowColor = isRed ? T.redGlow : T.cyanGlow;
+
+      // Trail
+      ctx.globalAlpha = 0.15;
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5 * s;
+      const trailLen = 30 * s;
+      ctx.beginPath(); ctx.moveTo(Math.max(padX, px - trailLen), laneY); ctx.lineTo(px, laneY); ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // Glow
+      glow(px, laneY, (isRed ? 18 : 12) * s, glowColor);
+
+      // Draw shape: anomalies are TRIANGLES, normal data is circles
+      if (p.anomaly) {
+        // Anomalies are always triangles — cyan before detection, red after
+        const triColor = isRed ? T.red : (isPreDetect ? T.amber : T.cyan);
+        const triGlow = isRed ? T.redGlow : (isPreDetect ? T.amberGlow : T.cyanGlow);
+        drawTriangle(px, laneY, dotR, triColor, triGlow, 0);
+      } else {
+        // Normal packets: circles
+        drawCircle(px, laneY, dotR, color, glowColor);
+      }
+
+      // Anomaly detection flash + badge
+      if (isRed) {
+        const age = t - p.detectedAt;
+        if (age < 1.5) {
+          // Expanding ring (triangular-ish — use a circle for simplicity)
+          const ringR = dotR + age * 20 * s;
+          ctx.beginPath(); ctx.arc(px, laneY, ringR, 0, Math.PI * 2);
+          ctx.strokeStyle = T.red; ctx.lineWidth = 1.5;
+          ctx.globalAlpha = Math.max(0, 1 - age / 1.5);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+
+        // Badge
+        const badgeW = 70 * s, badgeH = 16 * s;
+        const bx = px - badgeW / 2, by = laneY - dotR - 20 * s;
+        ctx.fillStyle = T.surface; ctx.globalAlpha = 0.9;
+        ctx.beginPath(); ctx.roundRect(bx, by, badgeW, badgeH, 3 * s); ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = T.red; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.roundRect(bx, by, badgeW, badgeH, 3 * s); ctx.stroke();
+        ctx.font = `600 ${Math.max(7, 8 * s)}px 'IBM Plex Mono', monospace`;
+        ctx.fillStyle = T.red; ctx.textAlign = 'center';
+        ctx.fillText('ANOMALY', px, by + badgeH * 0.7);
+
+        // Divert line going down
+        if (px < W - padX) {
+          ctx.strokeStyle = T.red; ctx.lineWidth = 1; ctx.globalAlpha = 0.4;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath(); ctx.moveTo(px, laneY + dotR); ctx.lineTo(px + 20 * s, laneY + laneH * 0.6); ctx.stroke();
+          ctx.setLineDash([]); ctx.globalAlpha = 1;
+        }
+      }
+    }
+    packets.length = 0; packets.push(...kept);
+
+    // Legend: top-right
+    const legX = W - 10 * s;
+    const legY = 14 * s;
+    ctx.font = `400 ${Math.max(7, 8 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.textAlign = 'right';
+
+    // Circle = normal
+    ctx.fillStyle = T.cyan;
+    ctx.beginPath(); ctx.arc(legX - 55 * s, legY, 3 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = T.textMut;
+    ctx.fillText('NORMAL', legX - 42 * s, legY + 3 * s);
+
+    // Triangle = anomaly
+    drawTriangle(legX - 15 * s, legY, 4 * s, T.amber, T.amberGlow, 0);
+    ctx.fillStyle = T.textMut; ctx.textAlign = 'right';
+    ctx.fillText('▲', legX - 5 * s, legY + 3 * s);
+
+    // Replace with text
+    ctx.textAlign = 'right';
+    ctx.fillText('ANOMALY', legX, legY + 3 * s);
+
+    // Status
+    ctx.font = `500 ${Math.max(8, 10 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = T.textMut; ctx.textAlign = 'left';
+    ctx.fillText('DATA PIPELINE', 28 * s, 18 * s);
+    const dotOn = Math.sin(t * 4) > 0;
+    ctx.beginPath(); ctx.arc(14 * s, 15 * s, Math.max(3, 4 * s), 0, Math.PI * 2);
+    ctx.fillStyle = dotOn ? T.green : T.textMut; ctx.fill();
+
+    // Throughput counter
+    const tps = Math.floor(120 + Math.sin(t * 0.7) * 15);
+    ctx.font = `400 ${Math.max(7, 8 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = T.textMut; ctx.textAlign = 'right';
+    ctx.fillText(`${tps} msg/s`, W - 10 * s, H - 10 * s);
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

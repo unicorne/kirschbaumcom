@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time Series Forecast — Multi-Horizon</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #08090d;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; overflow: hidden;
+    font-family: 'IBM Plex Mono', -apple-system, monospace;
+  }
+  .wrap { width: 94vw; max-width: 900px; }
+  canvas { display: block; width: 100%; height: 380px; border-radius: 8px; background: #0d1117; }
+  .meta {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 2px; color: #484f58; font-size: 10px; letter-spacing: 0.1em;
+  }
+  .meta span { color: #58a6ff; }
+  @media (max-width: 600px) { canvas { height: 280px; } }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="wrap">
+  <div class="meta">
+    <div>MULTI-HORIZON FORECAST <span>/ GROWING UNCERTAINTY</span></div>
+    <div>EXAMPLE 02</div>
+  </div>
+  <canvas id="c"></canvas>
+</div>
+
+<script>
+(() => {
+  const T = {
+    void: '#08090d', bg: '#0d1117', surface: '#161b22',
+    border: '#21262d', borderLight: '#30363d',
+    blue: '#58a6ff', blueGlow: 'rgba(88,166,255,0.35)', blueDim: 'rgba(88,166,255,0.08)',
+    cyan: '#39d2c0', cyanGlow: 'rgba(57,210,192,0.35)',
+    green: '#3fb950', greenGlow: 'rgba(63,185,80,0.3)',
+    red: '#f85149', redGlow: 'rgba(248,81,73,0.4)',
+    amber: '#d29922', amberGlow: 'rgba(210,153,34,0.3)',
+    purple: '#bc8cff', purpleGlow: 'rgba(188,140,255,0.3)',
+    text: '#e6edf3', textSec: '#8b949e', textMut: '#484f58',
+  };
+  // --- Color override via postMessage ---
+  function _hexToRgb(h){h=h.replace("#","");return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+  function _rgba(hex,a){const[r,g,b]=_hexToRgb(hex);return "rgba("+r+","+g+","+b+","+a+")";}
+  window.addEventListener("message",function(e){
+    if(e.data&&e.data.type==="theme"){
+      var c=e.data.colors;
+      if(c.blue){T.blue=c.blue;T.blueGlow=_rgba(c.blue,0.35);T.blueDim=_rgba(c.blue,0.08);}
+      if(c.cyan){T.cyan=c.cyan;T.cyanGlow=_rgba(c.cyan,0.35);T.cyanDim=_rgba(c.cyan,0.08);}
+      if(c.green){T.green=c.green;T.greenGlow=_rgba(c.green,0.3);T.greenDim=_rgba(c.green,0.08);}
+      if(c.red){T.red=c.red;T.redGlow=_rgba(c.red,0.4);}
+      if(c.amber){T.amber=c.amber;T.amberGlow=_rgba(c.amber,0.3);T.amberDim=_rgba(c.amber,0.08);}
+      if(c.purple){T.purple=c.purple;T.purpleGlow=_rgba(c.purple,0.3);T.purpleDim=_rgba(c.purple,0.08);}
+      if(c.bg){T.bg=c.bg;var cv=document.querySelector("canvas");if(cv)cv.style.background=c.bg;}
+      if(c.void){T.void=c.void;document.body.style.background=c.void;}
+      if(c.surface)T.surface=c.surface;
+      if(c.border)T.border=c.border;
+      if(c.borderLight)T.borderLight=c.borderLight;
+      if(c.text)T.text=c.text;
+      if(c.textSec)T.textSec=c.textSec;
+      if(c.textMut){T.textMut=c.textMut;var m=document.querySelector(".meta");if(m)m.style.color=c.textMut;}
+    }
+  });
+
+  let mobile = window.innerWidth < 600;
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H, dpr;
+
+  function resize() {
+    mobile = window.innerWidth < 600;
+    dpr = Math.min(window.devicePixelRatio || 1, mobile ? 2 : 3);
+    const r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function S(w) { return Math.max(0.45, w / 600); }
+  function shadow(color, blur) { if (mobile) return; ctx.shadowColor = color; ctx.shadowBlur = blur; }
+
+  function drawGrid(w, h) {
+    ctx.strokeStyle = T.border; ctx.lineWidth = 0.5;
+    ctx.globalAlpha = mobile ? 0.25 : 0.4;
+    const sp = (mobile ? 55 : 40) * Math.max(0.6, S(w));
+    if (!mobile) { for (let x = 0; x < w; x += sp) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); } }
+    for (let y = 0; y < h; y += sp) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+  }
+
+  /* ── Seeded RNG ── */
+  let rng = 42;
+  function rand() { rng = (rng * 16807 + 0) % 2147483647; return rng / 2147483647; }
+
+  /* ── Data generation ── */
+  const TOTAL = 150;
+  const SPLIT = 50; // ~33% historical
+
+  // Generate historical data with trend + seasonality + noise
+  rng = 42;
+  const raw = [];
+  let v = 50;
+  for (let i = 0; i < TOTAL; i++) {
+    const trend = 0.12;
+    const season = Math.sin(i * 0.08) * 10 + Math.sin(i * 0.2) * 4 + Math.cos(i * 0.035) * 6;
+    v += trend + (rand() - 0.49) * 2.5;
+    raw.push(v + season);
+  }
+
+  // Smooth historical portion lightly
+  const data = [];
+  const WN = 3;
+  for (let i = 0; i < raw.length; i++) {
+    let sum = 0, c = 0;
+    for (let j = Math.max(0, i - WN); j <= Math.min(raw.length - 1, i + WN); j++) { sum += raw[j]; c++; }
+    data.push(sum / c);
+  }
+
+  // Smooth the forecast portion heavily so the mean (and thus the bands) are clean
+  for (let pass = 0; pass < 5; pass++) {
+    for (let i = SPLIT + 1; i < TOTAL - 1; i++) {
+      data[i] = data[i] * 0.3 + (data[i - 1] + data[i + 1]) * 0.35;
+    }
+  }
+
+  const minVal = Math.min(...data) - 25;
+  const maxVal = Math.max(...data) + 25;
+
+  // GP-style variance: grows overall but with smooth regions of more/less certainty
+  function gpVariance(i) {
+    if (i <= SPLIT) return 0;
+    const t = (i - SPLIT) / (TOTAL - SPLIT);
+    const growth = t * t * 55 + t * 12;
+    // Smooth bumps: sometimes more certain, sometimes less
+    const wave = Math.sin(t * Math.PI * 2.5) * 0.3 * t; // amplitude grows with t
+    return growth * (1 + wave);
+  }
+
+  // Observation points on the historical line (sparse, like GP training data)
+  const observations = [];
+  { rng = 77;
+    for (let i = 3; i < SPLIT - 2; i += Math.floor(4 + rand() * 6)) {
+      observations.push(i);
+    }
+  }
+
+  /* ── Mapping ── */
+  const PAD = { top: 28, right: 14, bottom: 32, left: 14 };
+  function xOf(i) { return PAD.left + (i / (TOTAL - 1)) * (W - PAD.left - PAD.right); }
+  function yOf(v) { return PAD.top + (1 - (v - minVal) / (maxVal - minVal)) * (H - PAD.top - PAD.bottom); }
+
+  /* ── Animation ── */
+  let startTime = null;
+
+  function draw(ts) {
+    if (!startTime) startTime = ts;
+    const t = (ts - startTime) / 1000;
+    const s = S(W);
+    ctx.clearRect(0, 0, W, H);
+    drawGrid(W, H);
+
+    // Single continuous draw at uniform speed, then hold
+    const drawDur = 3.5, holdDur = 4.0;
+    const totalDur = drawDur + holdDur;
+    const cycleT = t % totalDur;
+
+    // revealIdx goes from 0 to TOTAL-1 at constant speed
+    const revealFrac = Math.min(1, cycleT / drawDur);
+    const revealIdx = revealFrac * (TOTAL - 1);
+
+    const histEnd = Math.min(Math.floor(revealIdx), SPLIT);
+    const histFrac = histEnd / SPLIT;
+    const fcstEnd = Math.floor(revealIdx);
+    const fcstFrac = revealIdx > SPLIT ? (revealIdx - SPLIT) / (TOTAL - SPLIT) : 0;
+
+    const splitX = xOf(SPLIT);
+
+    // ── Confidence bands (3 sigma levels) ──
+    if (fcstFrac > 0) {
+      const sigmaLevels = [3, 2, 1];
+      const alphas = [0.04, 0.07, 0.12];
+
+      for (let si = 0; si < sigmaLevels.length; si++) {
+        const sigma = sigmaLevels[si];
+        const alpha = alphas[si];
+
+        ctx.beginPath();
+        for (let i = SPLIT; i <= fcstEnd; i++) {
+          const x = xOf(i), ci = gpVariance(i) * sigma / 3;
+          const y = yOf(data[i] + ci);
+          i === SPLIT ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        for (let i = fcstEnd; i >= SPLIT; i--) {
+          const ci = gpVariance(i) * sigma / 3;
+          ctx.lineTo(xOf(i), yOf(data[i] - ci));
+        }
+        ctx.closePath();
+        ctx.fillStyle = `rgba(88,166,255,${alpha})`;
+        ctx.fill();
+      }
+
+      // Boundary lines for outer band
+      ctx.strokeStyle = 'rgba(88,166,255,0.12)';
+      ctx.lineWidth = 0.8;
+      ctx.setLineDash([3 * s, 4 * s]);
+      for (const sign of [1, -1]) {
+        ctx.beginPath();
+        for (let i = SPLIT; i <= fcstEnd; i++) {
+          const ci = gpVariance(i);
+          const x = xOf(i), y = yOf(data[i] + sign * ci);
+          i === SPLIT ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
+
+    // ── "Now" divider ──
+    if (histFrac >= 1) {
+      ctx.save();
+      ctx.setLineDash([4 * s, 4 * s]);
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(splitX, PAD.top);
+      ctx.lineTo(splitX, H - PAD.bottom);
+      ctx.stroke();
+      ctx.restore();
+
+      const lblFs = Math.max(7, 8 * s);
+      ctx.font = `500 ${lblFs}px 'IBM Plex Mono', monospace`;
+      ctx.fillStyle = T.textMut; ctx.textAlign = 'center';
+      ctx.fillText('NOW', splitX, H - PAD.bottom + 14 * s);
+    }
+
+    // ── Historical line ──
+    if (histEnd > 0) {
+      ctx.save();
+      shadow(T.cyanGlow, 8 * s);
+      ctx.strokeStyle = T.cyan;
+      ctx.lineWidth = 2 * s;
+      ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      ctx.beginPath();
+      const step = mobile ? 2 : 1;
+      for (let i = 0; i <= histEnd; i += step) {
+        const x = xOf(i), y = yOf(data[i]);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ── Observation dots on historical line ──
+    if (histEnd > 0) {
+      for (const oi of observations) {
+        if (oi > histEnd) continue;
+        const px = xOf(oi), py = yOf(data[oi]);
+
+        // Glow
+        const g = ctx.createRadialGradient(px, py, 0, px, py, 14 * s);
+        g.addColorStop(0, 'rgba(57,210,192,0.25)');
+        g.addColorStop(1, 'transparent');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(px, py, 14 * s, 0, Math.PI * 2); ctx.fill();
+
+        // Ring
+        ctx.beginPath(); ctx.arc(px, py, 3.5 * s, 0, Math.PI * 2);
+        ctx.fillStyle = T.bg; ctx.fill();
+        ctx.strokeStyle = T.cyan; ctx.lineWidth = 1.8 * s; ctx.stroke();
+      }
+    }
+
+    // ── Forecast mean line ──
+    if (fcstFrac > 0) {
+      ctx.save();
+      shadow(T.blueGlow, 10 * s);
+      const fGrad = ctx.createLinearGradient(splitX, 0, xOf(TOTAL - 1), 0);
+      fGrad.addColorStop(0, 'rgba(88,166,255,0.9)');
+      fGrad.addColorStop(0.5, 'rgba(88,166,255,0.6)');
+      fGrad.addColorStop(1, 'rgba(88,166,255,0.3)');
+      ctx.strokeStyle = fGrad;
+      ctx.lineWidth = 2 * s;
+      ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      ctx.setLineDash([6 * s, 3 * s]);
+      ctx.beginPath();
+      const step = mobile ? 2 : 1;
+      for (let i = SPLIT; i <= fcstEnd; i += step) {
+        const x = xOf(i), y = yOf(data[i]);
+        i === SPLIT ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ── Tip dot ──
+    const tipIdx = fcstFrac > 0 ? fcstEnd : histEnd;
+    if (tipIdx > 0) {
+      const tx = xOf(tipIdx), ty = yOf(data[tipIdx]);
+      const isForecast = tipIdx > SPLIT;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(tx, ty, 3.5 * s, 0, Math.PI * 2);
+      ctx.fillStyle = isForecast ? T.blue : T.cyan;
+      shadow(isForecast ? T.blueGlow : T.cyanGlow, 14 * s);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // ── Forecast label ──
+    if (fcstFrac > 0.15) {
+      ctx.globalAlpha = Math.min(1, (fcstFrac - 0.15) / 0.25);
+      const fs = Math.max(8, 9 * s);
+      ctx.font = `500 ${fs}px 'IBM Plex Mono', monospace`;
+      ctx.fillStyle = T.blue; ctx.textAlign = 'left';
+      ctx.fillText('FORECAST', splitX + 14 * s, PAD.top + 8 * s);
+      ctx.globalAlpha = 1;
+    }
+
+
+    // ── Sigma legend ──
+    if (fcstFrac > 0.5) {
+      ctx.globalAlpha = Math.min(1, (fcstFrac - 0.5) / 0.3);
+      const lFs = Math.max(7, 8 * s);
+      ctx.font = `400 ${lFs}px 'IBM Plex Mono', monospace`;
+      ctx.textAlign = 'right';
+      const ly = H - 8 * s;
+      ctx.fillStyle = 'rgba(88,166,255,0.3)';
+      ctx.fillText('1\u03C3  2\u03C3  3\u03C3', W - 12 * s, ly);
+      ctx.globalAlpha = 1;
+    }
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

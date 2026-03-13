@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chatbot — Conversation Flow</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #08090d;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; overflow: hidden;
+    font-family: 'IBM Plex Mono', -apple-system, monospace;
+  }
+  .wrap { width: 94vw; max-width: 900px; }
+  canvas { display: block; width: 100%; height: 420px; border-radius: 8px; background: #0d1117; }
+  .meta {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 2px; color: #484f58; font-size: 10px; letter-spacing: 0.1em;
+  }
+  .meta span { color: #58a6ff; }
+  @media (max-width: 600px) { canvas { height: 340px; } }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="wrap">
+  <div class="meta">
+    <div>CHATBOT <span>/ CONVERSATION FLOW</span></div>
+    <div>EXAMPLE 03</div>
+  </div>
+  <canvas id="c"></canvas>
+</div>
+
+<script>
+(() => {
+  const T = {
+    void: '#08090d', bg: '#0d1117', surface: '#161b22',
+    border: '#21262d', borderLight: '#30363d',
+    blue: '#58a6ff', blueGlow: 'rgba(88,166,255,0.35)', blueDim: 'rgba(88,166,255,0.08)',
+    cyan: '#39d2c0', cyanGlow: 'rgba(57,210,192,0.35)', cyanDim: 'rgba(57,210,192,0.08)',
+    green: '#3fb950', greenGlow: 'rgba(63,185,80,0.3)',
+    purple: '#bc8cff', purpleGlow: 'rgba(188,140,255,0.35)', purpleDim: 'rgba(188,140,255,0.08)',
+    amber: '#d29922', amberGlow: 'rgba(210,153,34,0.35)', amberDim: 'rgba(210,153,34,0.08)',
+    red: '#f85149',
+    text: '#e6edf3', textSec: '#8b949e', textMut: '#484f58',
+  };
+  // --- Color override via postMessage ---
+  function _hexToRgb(h){h=h.replace("#","");return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+  function _rgba(hex,a){const[r,g,b]=_hexToRgb(hex);return "rgba("+r+","+g+","+b+","+a+")";}
+  window.addEventListener("message",function(e){
+    if(e.data&&e.data.type==="theme"){
+      var c=e.data.colors;
+      if(c.blue){T.blue=c.blue;T.blueGlow=_rgba(c.blue,0.35);T.blueDim=_rgba(c.blue,0.08);}
+      if(c.cyan){T.cyan=c.cyan;T.cyanGlow=_rgba(c.cyan,0.35);T.cyanDim=_rgba(c.cyan,0.08);}
+      if(c.green){T.green=c.green;T.greenGlow=_rgba(c.green,0.3);T.greenDim=_rgba(c.green,0.08);}
+      if(c.red){T.red=c.red;T.redGlow=_rgba(c.red,0.4);}
+      if(c.amber){T.amber=c.amber;T.amberGlow=_rgba(c.amber,0.3);T.amberDim=_rgba(c.amber,0.08);}
+      if(c.purple){T.purple=c.purple;T.purpleGlow=_rgba(c.purple,0.3);T.purpleDim=_rgba(c.purple,0.08);}
+      if(c.bg){T.bg=c.bg;var cv=document.querySelector("canvas");if(cv)cv.style.background=c.bg;}
+      if(c.void){T.void=c.void;document.body.style.background=c.void;}
+      if(c.surface)T.surface=c.surface;
+      if(c.border)T.border=c.border;
+      if(c.borderLight)T.borderLight=c.borderLight;
+      if(c.text)T.text=c.text;
+      if(c.textSec)T.textSec=c.textSec;
+      if(c.textMut){T.textMut=c.textMut;var m=document.querySelector(".meta");if(m)m.style.color=c.textMut;}
+    }
+  });
+
+  let mobile = window.innerWidth < 600;
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    mobile = window.innerWidth < 600;
+    const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 2 : 3);
+    const r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function S(w) { return Math.max(0.45, w / 600); }
+  function shadow(c, b) { if (!mobile) { ctx.shadowColor = c; ctx.shadowBlur = b; } }
+  function drawGlow(x, y, r, c) {
+    if (mobile) r *= 0.6;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, c); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+  function colorAlpha(hex, a) {
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+
+  /* ── Node graph representing conversation flow ── */
+  // Nodes: USER → ENCODE → RETRIEVE → REASON → GENERATE → RESPOND
+  const nodeLabels = ['USER', 'ENCODE', 'RETRIEVE', 'REASON', 'GENERATE', 'RESPOND'];
+  const nodeColors = [T.blue, T.cyan, T.amber, T.purple, T.green, T.blue];
+  const nodeGlows = [T.blueGlow, T.cyanGlow, T.amberGlow, T.purpleGlow, T.greenGlow, T.blueGlow];
+  const nodeDimColors = [T.blueDim, T.cyanDim, T.amberDim, T.purpleDim, colorAlpha(T.green, 0.08), T.blueDim];
+
+  // Signals traveling the path
+  let signals = [];
+  let lastSpawn = 0;
+  const spawnInterval = 2.5;
+
+  // Sub-labels for each node
+  const subLabels = ['Query', 'Embedding', 'Context', 'Chain-of-Thought', 'Tokens', 'Response'];
+
+  const cycleDur = 10;
+
+  function draw(ts) {
+    if (!draw.start) draw.start = ts;
+    const t = (ts - draw.start) / 1000;
+    const s = S(W);
+    ctx.clearRect(0, 0, W, H);
+
+    // Grid
+    ctx.strokeStyle = T.border; ctx.lineWidth = 0.5;
+    ctx.globalAlpha = mobile ? 0.2 : 0.35;
+    const gsp = 40 * s;
+    for (let y = 0; y <= H; y += gsp) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+    if (!mobile) {
+      for (let x = 0; x <= W; x += gsp) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    const padX = 50 * s;
+    const padY = 60 * s;
+    const nodeCount = nodeLabels.length;
+    const nodeR = Math.max(14, 22 * s);
+    const usableW = W - padX * 2;
+    const usableH = H - padY * 2;
+
+    // Layout nodes in a zigzag/pipeline pattern
+    const nodes = [];
+    for (let i = 0; i < nodeCount; i++) {
+      const cols = mobile ? 3 : nodeCount;
+      const row = mobile ? Math.floor(i / 3) : 0;
+      const col = mobile ? (i % 3) : i;
+      const colCount = mobile ? Math.min(3, nodeCount - row * 3) : nodeCount;
+
+      const x = padX + (col / (colCount - 1 || 1)) * usableW;
+      const yBase = H / 2;
+      const yOffset = mobile
+        ? (row - 0.5) * 100 * s
+        : Math.sin(i * 0.8) * 30 * s;
+
+      nodes.push({ x, y: yBase + yOffset, label: nodeLabels[i], color: nodeColors[i], glow: nodeGlows[i], dim: nodeDimColors[i] });
+    }
+
+    // ── Draw edges ──
+    for (let i = 0; i < nodes.length - 1; i++) {
+      const a = nodes[i], b = nodes[i + 1];
+      ctx.beginPath();
+      ctx.strokeStyle = T.border;
+      ctx.lineWidth = 1.5 * s;
+      ctx.globalAlpha = 0.5;
+
+      // Curved connection
+      const cpx = (a.x + b.x) / 2;
+      const cpy = Math.min(a.y, b.y) - 25 * s;
+      ctx.moveTo(a.x, a.y);
+      ctx.quadraticCurveTo(cpx, cpy, b.x, b.y);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // Arrow at midpoint
+      const mt = 0.5;
+      const mx = (1-mt)*(1-mt)*a.x + 2*(1-mt)*mt*cpx + mt*mt*b.x;
+      const my = (1-mt)*(1-mt)*a.y + 2*(1-mt)*mt*cpy + mt*mt*b.y;
+      // Tangent direction
+      const tx = 2*(1-mt)*(cpx-a.x) + 2*mt*(b.x-cpx);
+      const ty = 2*(1-mt)*(cpy-a.y) + 2*mt*(b.y-cpy);
+      const angle = Math.atan2(ty, tx);
+
+      ctx.save();
+      ctx.translate(mx, my);
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.moveTo(5 * s, 0);
+      ctx.lineTo(-3 * s, -3 * s);
+      ctx.lineTo(-3 * s, 3 * s);
+      ctx.closePath();
+      ctx.fillStyle = T.textMut;
+      ctx.globalAlpha = 0.5;
+      ctx.fill();
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+
+    // Return edge: RESPOND → USER (dashed)
+    const first = nodes[0], last = nodes[nodes.length - 1];
+    ctx.beginPath();
+    ctx.strokeStyle = T.border;
+    ctx.lineWidth = 1 * s;
+    ctx.setLineDash([4 * s, 4 * s]);
+    ctx.globalAlpha = 0.3;
+    const returnCpy = Math.max(first.y, last.y) + 60 * s;
+    ctx.moveTo(last.x, last.y);
+    ctx.quadraticCurveTo((first.x + last.x) / 2, returnCpy, first.x, first.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+
+    // ── Spawn signals ──
+    if (t - lastSpawn > spawnInterval) {
+      signals.push({ progress: 0, speed: 0.12 + Math.random() * 0.04 });
+      lastSpawn = t;
+    }
+
+    // ── Update & draw signals ──
+    const activeSignals = [];
+    for (const sig of signals) {
+      sig.progress += sig.speed * 0.016;
+
+      // Map progress 0→1 across all edges
+      const totalEdges = nodes.length - 1;
+      const edgeProgress = sig.progress * totalEdges;
+      const edgeIdx = Math.floor(edgeProgress);
+      const edgeFrac = edgeProgress - edgeIdx;
+
+      if (edgeIdx >= totalEdges) continue; // signal completed
+      activeSignals.push(sig);
+
+      const a = nodes[edgeIdx], b = nodes[edgeIdx + 1];
+      const cpx = (a.x + b.x) / 2;
+      const cpy = Math.min(a.y, b.y) - 25 * s;
+
+      // Position on quadratic curve
+      const tt = edgeFrac;
+      const px = (1-tt)*(1-tt)*a.x + 2*(1-tt)*tt*cpx + tt*tt*b.x;
+      const py = (1-tt)*(1-tt)*a.y + 2*(1-tt)*tt*cpy + tt*tt*b.y;
+
+      // Signal color matches source node
+      const sigColor = nodeColors[edgeIdx];
+      const sigGlow = nodeGlows[edgeIdx];
+
+      drawGlow(px, py, 15 * s, sigGlow);
+
+      ctx.beginPath();
+      ctx.arc(px, py, 4 * s, 0, Math.PI * 2);
+      ctx.fillStyle = sigColor;
+      shadow(sigGlow, 8 * s);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Trail
+      for (let tr = 1; tr <= 4; tr++) {
+        const ttt = Math.max(0, tt - tr * 0.06);
+        const trx = (1-ttt)*(1-ttt)*a.x + 2*(1-ttt)*ttt*cpx + ttt*ttt*b.x;
+        const trY = (1-ttt)*(1-ttt)*a.y + 2*(1-ttt)*ttt*cpy + ttt*ttt*b.y;
+        ctx.beginPath();
+        ctx.arc(trx, trY, (3 - tr * 0.5) * s, 0, Math.PI * 2);
+        ctx.fillStyle = colorAlpha(sigColor, 0.4 - tr * 0.08);
+        ctx.fill();
+      }
+
+      // Light up target node when signal is close
+      if (edgeFrac > 0.85) {
+        nodes[edgeIdx + 1]._activation = Math.max(nodes[edgeIdx + 1]._activation || 0, (edgeFrac - 0.85) / 0.15);
+      }
+    }
+    signals = activeSignals;
+
+    // ── Draw nodes ──
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i];
+      const activation = n._activation || 0;
+
+      // Outer glow when activated
+      if (activation > 0.1) {
+        drawGlow(n.x, n.y, nodeR * 2.5, n.glow);
+      }
+
+      // Node circle — dim fill
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, nodeR, 0, Math.PI * 2);
+      ctx.fillStyle = n.dim;
+      ctx.fill();
+
+      // Node border
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, nodeR, 0, Math.PI * 2);
+      ctx.strokeStyle = colorAlpha(n.color, 0.4 + activation * 0.6);
+      ctx.lineWidth = (1.5 + activation * 1) * s;
+      if (activation > 0.5 && !mobile) {
+        shadow(n.glow, 8 * s);
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Inner dot when activated
+      if (activation > 0.3) {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, 4 * s * activation, 0, Math.PI * 2);
+        ctx.fillStyle = colorAlpha(n.color, activation);
+        ctx.fill();
+      }
+
+      // Label
+      const labelFs = Math.max(7, 9 * s);
+      ctx.font = `600 ${labelFs}px 'IBM Plex Mono', monospace`;
+      ctx.fillStyle = colorAlpha(n.color, 0.6 + activation * 0.4);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(n.label, n.x, n.y - nodeR - 10 * s);
+
+      // Sub-label
+      ctx.font = `400 ${Math.max(6, 7 * s)}px 'IBM Plex Mono', monospace`;
+      ctx.fillStyle = T.textMut;
+      ctx.fillText(subLabels[i], n.x, n.y + nodeR + 12 * s);
+
+      // Decay activation
+      n._activation = Math.max(0, (n._activation || 0) - 0.015);
+    }
+
+    // ── Processing indicator — pulse ring on active node ──
+    const cycleT = (t % cycleDur) / cycleDur;
+    const activeNodeIdx = Math.floor(cycleT * nodeCount) % nodeCount;
+    const activeNode = nodes[activeNodeIdx];
+    const pulseR = nodeR + 4 * s + Math.sin(t * 6) * 3 * s;
+    ctx.beginPath();
+    ctx.arc(activeNode.x, activeNode.y, pulseR, 0, Math.PI * 2);
+    ctx.strokeStyle = colorAlpha(activeNode.color, 0.3 + Math.sin(t * 4) * 0.15);
+    ctx.lineWidth = 1 * s;
+    ctx.stroke();
+
+    // ── Latency metrics panel ──
+    const mPanelW = mobile ? 100 * s : 130 * s;
+    const mPanelH = 70 * s;
+    const mPanelX = W - padX - mPanelW;
+    const mPanelY = H - 16 * s - mPanelH;
+
+    ctx.fillStyle = T.surface; ctx.globalAlpha = 0.85;
+    ctx.beginPath(); ctx.roundRect(mPanelX, mPanelY, mPanelW, mPanelH, 5 * s); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = T.border; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(mPanelX, mPanelY, mPanelW, mPanelH, 5 * s); ctx.stroke();
+
+    const metricFs = Math.max(6, 7 * s);
+    ctx.font = `500 ${metricFs}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = T.textMut; ctx.textAlign = 'left';
+    ctx.fillText('PIPELINE METRICS', mPanelX + 8 * s, mPanelY + 12 * s);
+
+    ctx.font = `400 ${metricFs}px 'IBM Plex Mono', monospace`;
+    const latency = (120 + Math.sin(t * 0.7) * 30).toFixed(0);
+    const throughput = (45 + Math.sin(t * 1.1) * 12).toFixed(0);
+    const queueLen = Math.floor(2 + Math.sin(t * 0.5) * 2);
+
+    ctx.fillStyle = T.cyan;
+    ctx.fillText(`Latency: ${latency}ms`, mPanelX + 8 * s, mPanelY + 28 * s);
+    ctx.fillStyle = T.green;
+    ctx.fillText(`Throughput: ${throughput}/s`, mPanelX + 8 * s, mPanelY + 42 * s);
+    ctx.fillStyle = T.amber;
+    ctx.fillText(`Queue: ${queueLen}`, mPanelX + 8 * s, mPanelY + 56 * s);
+
+    // Status label top-left
+    ctx.font = `500 ${Math.max(8, 10 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = T.textMut; ctx.textAlign = 'left';
+    ctx.fillText('CONVERSATION FLOW', 28 * s, 18 * s);
+    const dotOn = Math.sin(t * 4) > 0;
+    ctx.beginPath(); ctx.arc(14 * s, 15 * s, Math.max(3, 4 * s), 0, Math.PI * 2);
+    ctx.fillStyle = dotOn ? T.green : T.textMut; ctx.fill();
+
+    // Active signals count top-right
+    ctx.font = `400 ${Math.max(7, 8 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = T.textMut; ctx.textAlign = 'right';
+    ctx.fillText(`SIGNALS: ${signals.length}`, W - 10 * s, 18 * s);
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

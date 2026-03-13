@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Animation Showcase — Color Designer</title>
+<style>
+  :root {
+    --void: #08090d;
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #21262d;
+    --border-light: #30363d;
+    --blue: #58a6ff;
+    --cyan: #39d2c0;
+    --green: #3fb950;
+    --red: #f85149;
+    --amber: #d29922;
+    --purple: #bc8cff;
+    --text: #e6edf3;
+    --text-sec: #8b949e;
+    --text-mut: #484f58;
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--void);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', -apple-system, monospace;
+    min-height: 100vh;
+  }
+
+  /* ── Color Control Bar ── */
+  .color-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    backdrop-filter: blur(12px);
+  }
+
+  .color-bar-title {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--text-mut);
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .color-bar-title button {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-sec);
+    font-family: inherit;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .color-bar-title button:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+
+  .color-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .color-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .color-group label {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--text-mut);
+    text-transform: uppercase;
+  }
+
+  .color-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 8px 3px 3px;
+  }
+
+  .color-input-wrap input[type="color"] {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 3px;
+    cursor: pointer;
+    background: none;
+    padding: 0;
+  }
+  .color-input-wrap input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  .color-input-wrap input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
+
+  .color-input-wrap .hex-value {
+    font-size: 11px;
+    color: var(--text-sec);
+    font-family: inherit;
+    min-width: 60px;
+  }
+
+  .divider {
+    width: 1px;
+    height: 32px;
+    background: var(--border);
+    margin: 0 4px;
+  }
+
+  /* ── Presets ── */
+  .presets {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .preset-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-sec);
+    font-family: inherit;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .preset-btn:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+  .preset-btn .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  /* ── Main Content ── */
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  .section {
+    margin-bottom: 48px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-header h2 {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: var(--text-sec);
+    text-transform: uppercase;
+  }
+
+  .section-header .count {
+    font-size: 10px;
+    color: var(--text-mut);
+    background: var(--surface);
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+
+  .animation-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .animation-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .animation-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .animation-card .card-title {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--text-sec);
+  }
+
+  .animation-card .card-file {
+    font-size: 9px;
+    color: var(--text-mut);
+  }
+
+  .animation-card iframe {
+    width: 100%;
+    height: 440px;
+    border: none;
+    display: block;
+  }
+
+  @media (max-width: 600px) {
+    .color-controls { gap: 10px; }
+    .animation-card iframe { height: 340px; }
+    .container { padding: 16px 12px; }
+    .color-bar { padding: 12px 12px; }
+  }
+
+  @media (min-width: 1000px) {
+    .animation-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  /* ── Export Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+  }
+  .modal h3 {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--text-sec);
+    margin-bottom: 12px;
+  }
+  .modal pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px;
+    font-size: 11px;
+    color: var(--cyan);
+    overflow-x: auto;
+    white-space: pre;
+    line-height: 1.6;
+  }
+  .modal button {
+    margin-top: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-sec);
+    font-family: inherit;
+    font-size: 10px;
+    padding: 6px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ── Color Control Bar ── -->
+<div class="color-bar">
+  <div class="color-bar-title">
+    <span>COLOR DESIGN SYSTEM</span>
+    <div style="display:flex;gap:8px;">
+      <button onclick="exportTheme()">EXPORT TOKENS</button>
+      <button onclick="resetColors()">RESET</button>
+    </div>
+  </div>
+
+  <div class="color-controls">
+    <!-- Accent colors -->
+    <div class="color-group">
+      <label>Primary</label>
+      <div class="color-input-wrap">
+        <input type="color" id="pick-blue" value="#58a6ff" data-key="blue">
+        <span class="hex-value">#58a6ff</span>
+      </div>
+    </div>
+    <div class="color-group">
+      <label>Secondary</label>
+      <div class="color-input-wrap">
+        <input type="color" id="pick-cyan" value="#39d2c0" data-key="cyan">
+        <span class="hex-value">#39d2c0</span>
+      </div>
+    </div>
+    <div class="color-group">
+      <label>Success</label>
+      <div class="color-input-wrap">
+        <input type="color" id="pick-green" value="#3fb950" data-key="green">
+        <span class="hex-value">#3fb950</span>
+      </div>
+    </div>
+    <div class="color-group">
+      <label>Error</label>
+      <div class="color-input-wrap">
+        <input type="color" id="pick-red" value="#f85149" data-key="red">
+        <span class="hex-value">#f85149</span>
+      </div>
+    </div>
+    <div class="color-group">
+      <label>Warning</label>
+      <div class="color-input-wrap">
+        <input type="color" id="pick-amber" value="#d29922" data-key="amber">
+        <span class="hex-value">#d29922</span>
+      </div>
+    </div>
+    <div class="color-group">
+      <label>AI / Compute</label>
+      <div class="color-input-wrap">
+        <input type="color" id="pick-purple" value="#bc8cff" data-key="purple">
+        <span class="hex-value">#bc8cff</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Background colors -->
+    <div class="color-group">
+      <label>Background</label>
+      <div class="color-input-wrap">
+        <input type="color" id="pick-bg" value="#0d1117" data-key="bg">
+        <span class="hex-value">#0d1117</span>
+      </div>
+    </div>
+    <div class="color-group">
+      <label>Surface</label>
+      <div class="color-input-wrap">
+        <input type="color" id="pick-surface" value="#161b22" data-key="surface">
+        <span class="hex-value">#161b22</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="presets">
+    <span style="font-size:9px;color:var(--text-mut);letter-spacing:0.1em;align-self:center;">PRESETS:</span>
+    <button class="preset-btn" onclick="applyPreset('default')">
+      <span class="dot" style="background:#58a6ff;"></span> Midnight
+    </button>
+    <button class="preset-btn" onclick="applyPreset('ocean')">
+      <span class="dot" style="background:#0ea5e9;"></span> Ocean
+    </button>
+    <button class="preset-btn" onclick="applyPreset('ember')">
+      <span class="dot" style="background:#f97316;"></span> Ember
+    </button>
+    <button class="preset-btn" onclick="applyPreset('forest')">
+      <span class="dot" style="background:#22c55e;"></span> Forest
+    </button>
+    <button class="preset-btn" onclick="applyPreset('rose')">
+      <span class="dot" style="background:#f43f5e;"></span> Rose
+    </button>
+    <button class="preset-btn" onclick="applyPreset('mono')">
+      <span class="dot" style="background:#a1a1aa;"></span> Mono
+    </button>
+  </div>
+</div>
+
+<!-- ── Main Content ── -->
+<div class="container" id="app"></div>
+
+<!-- ── Export Modal ── -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3>EXPORTED COLOR TOKENS</h3>
+    <pre id="modal-code"></pre>
+    <div style="display:flex;gap:8px;">
+      <button onclick="copyTokens()">COPY</button>
+      <button onclick="document.getElementById('modal').classList.remove('active')">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Animation registry ──
+const SECTIONS = [
+  {
+    id: 'timeseries', title: 'Time Series', files: [
+      { file: '02-multi-horizon.html', name: 'Multi-Horizon Forecast' },
+    ]
+  },
+  {
+    id: 'anomaly', title: 'Anomaly Detection', files: [
+      { file: '01-sensor-stream.html', name: 'Sensor Stream' },
+      { file: '02-data-pipeline.html', name: 'Data Pipeline' },
+    ]
+  },
+  {
+    id: 'neuralnets', title: 'Neural Networks', files: [
+      { file: '02-backpropagation.html', name: 'Backpropagation' },
+      { file: '03-convolutional.html', name: 'Convolutional Network' },
+    ]
+  },
+  {
+    id: 'NLP', title: 'Natural Language Processing', files: [
+      { file: '01-sarcastic.html', name: 'Sarcastic Rewrite' },
+      { file: '02-token-generation.html', name: 'Token Generation' },
+      { file: '03-audio-pipeline.html', name: 'Audio Pipeline' },
+    ]
+  },
+  {
+    id: 'agents', title: 'AI Agents', files: [
+      { file: '03-conversation-flow.html', name: 'Conversation Flow' },
+      { file: '04-agent-tool-use.html', name: 'Agent Tool Use' },
+      { file: '04-voice-agent.html', name: 'Voice Agent' },
+    ]
+  },
+  {
+    id: 'optimization', title: 'Optimization', files: [
+      { file: '01-campaign-customer.html', name: 'Campaign Customer' },
+      { file: '04-recommender-system.html', name: 'Recommender System' },
+    ]
+  },
+  {
+    id: 'knowledge', title: 'Knowledge Systems', files: [
+      { file: '01-rag-pipeline.html', name: 'RAG Pipeline' },
+      { file: '02-web-scraping.html', name: 'Web Scraping' },
+    ]
+  },
+];
+
+// ── Default colors ──
+const DEFAULTS = {
+  blue: '#58a6ff', cyan: '#39d2c0', green: '#3fb950',
+  red: '#f85149', amber: '#d29922', purple: '#bc8cff',
+  bg: '#0d1117', surface: '#161b22', void: '#08090d',
+  border: '#21262d', borderLight: '#30363d',
+  text: '#e6edf3', textSec: '#8b949e', textMut: '#484f58',
+};
+
+// ── Presets ──
+const PRESETS = {
+  default: { ...DEFAULTS },
+  ocean: {
+    blue: '#0ea5e9', cyan: '#06b6d4', green: '#14b8a6',
+    red: '#ef4444', amber: '#f59e0b', purple: '#8b5cf6',
+    bg: '#0c1222', surface: '#152238', void: '#060b14',
+    border: '#1e3a5f', borderLight: '#2d4a6f',
+    text: '#e2e8f0', textSec: '#94a3b8', textMut: '#475569',
+  },
+  ember: {
+    blue: '#f97316', cyan: '#fb923c', green: '#84cc16',
+    red: '#ef4444', amber: '#eab308', purple: '#a855f7',
+    bg: '#18120b', surface: '#261c10', void: '#0d0906',
+    border: '#3d2e1a', borderLight: '#4d3a22',
+    text: '#fef3c7', textSec: '#d6a36e', textMut: '#6b4f30',
+  },
+  forest: {
+    blue: '#22c55e', cyan: '#34d399', green: '#4ade80',
+    red: '#f87171', amber: '#fbbf24', purple: '#a78bfa',
+    bg: '#0b1a0e', surface: '#132b17', void: '#060d07',
+    border: '#1a3d20', borderLight: '#2a5030',
+    text: '#dcfce7', textSec: '#86efac', textMut: '#3d6b4a',
+  },
+  rose: {
+    blue: '#f43f5e', cyan: '#fb7185', green: '#4ade80',
+    red: '#e11d48', amber: '#f59e0b', purple: '#c084fc',
+    bg: '#1a0b12', surface: '#2b1320', void: '#0d0609',
+    border: '#3d1a2a', borderLight: '#502238',
+    text: '#fce7f3', textSec: '#f9a8d4', textMut: '#6b3d55',
+  },
+  mono: {
+    blue: '#a1a1aa', cyan: '#d4d4d8', green: '#a1a1aa',
+    red: '#71717a', amber: '#a1a1aa', purple: '#d4d4d8',
+    bg: '#18181b', surface: '#27272a', void: '#09090b',
+    border: '#3f3f46', borderLight: '#52525b',
+    text: '#fafafa', textSec: '#a1a1aa', textMut: '#52525b',
+  },
+};
+
+let currentColors = { ...DEFAULTS };
+
+// ── Build the page ──
+function buildPage() {
+  const app = document.getElementById('app');
+  let html = '';
+  for (const section of SECTIONS) {
+    html += `<div class="section">
+      <div class="section-header">
+        <h2>${section.title}</h2>
+        <span class="count">${section.files.length} animation${section.files.length > 1 ? 's' : ''}</span>
+      </div>
+      <div class="animation-grid">`;
+    for (const anim of section.files) {
+      const src = `final_animations/${section.id}/${anim.file}`;
+      html += `<div class="animation-card">
+        <div class="card-header">
+          <span class="card-title">${anim.name}</span>
+          <span class="card-file">${section.id}/${anim.file}</span>
+        </div>
+        <iframe src="${src}" loading="lazy" class="anim-frame"></iframe>
+      </div>`;
+    }
+    html += `</div></div>`;
+  }
+  app.innerHTML = html;
+}
+buildPage();
+
+// ── Color picker wiring ──
+const pickers = document.querySelectorAll('input[type="color"]');
+pickers.forEach(picker => {
+  const key = picker.dataset.key;
+  picker.addEventListener('input', (e) => {
+    currentColors[key] = e.target.value;
+    picker.closest('.color-input-wrap').querySelector('.hex-value').textContent = e.target.value;
+    broadcastColors();
+  });
+});
+
+function broadcastColors() {
+  const frames = document.querySelectorAll('.anim-frame');
+  frames.forEach(f => {
+    if (f.contentWindow) {
+      f.contentWindow.postMessage({ type: 'theme', colors: currentColors }, '*');
+    }
+  });
+}
+
+// Send colors to each iframe once it loads
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.anim-frame').forEach(f => {
+    f.addEventListener('load', () => {
+      f.contentWindow.postMessage({ type: 'theme', colors: currentColors }, '*');
+    });
+  });
+});
+
+// ── Presets ──
+function applyPreset(name) {
+  const preset = PRESETS[name];
+  if (!preset) return;
+  currentColors = { ...preset };
+
+  // Update pickers
+  pickers.forEach(p => {
+    const key = p.dataset.key;
+    if (preset[key]) {
+      p.value = preset[key];
+      p.closest('.color-input-wrap').querySelector('.hex-value').textContent = preset[key];
+    }
+  });
+  broadcastColors();
+}
+
+function resetColors() {
+  applyPreset('default');
+}
+
+// ── Export ──
+function exportTheme() {
+  const lines = ['const T = {'];
+  const keys = ['void', 'bg', 'surface', 'border', 'borderLight',
+    'blue', 'cyan', 'green', 'red', 'amber', 'purple',
+    'text', 'textSec', 'textMut'];
+  for (const k of keys) {
+    lines.push(`  ${k}: '${currentColors[k] || DEFAULTS[k]}',`);
+  }
+  lines.push('};');
+
+  const cssLines = [':root {'];
+  const cssMap = {
+    void: '--void', bg: '--bg', surface: '--surface',
+    border: '--border', borderLight: '--border-light',
+    blue: '--blue', cyan: '--cyan', green: '--green',
+    red: '--red', amber: '--amber', purple: '--purple',
+    text: '--text', textSec: '--text-sec', textMut: '--text-mut',
+  };
+  for (const [k, v] of Object.entries(cssMap)) {
+    cssLines.push(`  ${v}: ${currentColors[k] || DEFAULTS[k]};`);
+  }
+  cssLines.push('}');
+
+  document.getElementById('modal-code').textContent =
+    '/* JS Token Object */\n' + lines.join('\n') + '\n\n/* CSS Custom Properties */\n' + cssLines.join('\n');
+  document.getElementById('modal').classList.add('active');
+}
+
+function copyTokens() {
+  const text = document.getElementById('modal-code').textContent;
+  navigator.clipboard.writeText(text);
+}
+</script>
+</body>
+</html>

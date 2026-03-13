@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Style Rewrite: Sarcastic &amp; Pirate</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #08090d;
+    color: #e6edf3;
+    font-family: 'IBM Plex Mono', 'SF Mono', 'Fira Code', monospace;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .scene {
+    width: 100%;
+    max-width: 680px;
+    padding: 2rem;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 320px;
+    border-radius: 6px;
+  }
+</style>
+</head>
+<body>
+
+<div class="scene">
+  <canvas id="c"></canvas>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H, dpr;
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = canvas.getBoundingClientRect();
+    W = rect.width;
+    H = rect.height;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  /* ── Theme tokens ── */
+  const T = {
+    bg: '#0d1117',
+    surface: '#161b22',
+    border: '#21262d',
+    red: '#f85149',
+    redGlow: 'rgba(248,81,73,0.4)',
+    green: '#3fb950',
+    greenGlow: 'rgba(63,185,80,0.3)',
+    text: '#e6edf3',
+    textSec: '#8b949e',
+    textMut: '#484f58',
+  };
+  // --- Color override via postMessage ---
+  function _hexToRgb(h){h=h.replace("#","");return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+  function _rgba(hex,a){const[r,g,b]=_hexToRgb(hex);return "rgba("+r+","+g+","+b+","+a+")";}
+  window.addEventListener("message",function(e){
+    if(e.data&&e.data.type==="theme"){
+      var c=e.data.colors;
+      if(c.blue){T.blue=c.blue;T.blueGlow=_rgba(c.blue,0.35);T.blueDim=_rgba(c.blue,0.08);}
+      if(c.cyan){T.cyan=c.cyan;T.cyanGlow=_rgba(c.cyan,0.35);T.cyanDim=_rgba(c.cyan,0.08);}
+      if(c.green){T.green=c.green;T.greenGlow=_rgba(c.green,0.3);T.greenDim=_rgba(c.green,0.08);}
+      if(c.red){T.red=c.red;T.redGlow=_rgba(c.red,0.4);}
+      if(c.amber){T.amber=c.amber;T.amberGlow=_rgba(c.amber,0.3);T.amberDim=_rgba(c.amber,0.08);}
+      if(c.purple){T.purple=c.purple;T.purpleGlow=_rgba(c.purple,0.3);T.purpleDim=_rgba(c.purple,0.08);}
+      if(c.bg){T.bg=c.bg;var cv=document.querySelector("canvas");if(cv)cv.style.background=c.bg;}
+      if(c.void){T.void=c.void;document.body.style.background=c.void;}
+      if(c.surface)T.surface=c.surface;
+      if(c.border)T.border=c.border;
+      if(c.borderLight)T.borderLight=c.borderLight;
+      if(c.text)T.text=c.text;
+      if(c.textSec)T.textSec=c.textSec;
+      if(c.textMut){T.textMut=c.textMut;var m=document.querySelector(".meta");if(m)m.style.color=c.textMut;}
+    }
+  });
+
+  const SCRAMBLE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*!?';
+
+  /* ── Rewrite data (alternating sarcastic=red, pirate=green) ── */
+  const REWRITES = [
+    {
+      command: '> write more sarcastic',
+      source: 'The deployment process took longer than expected and some features were delayed.',
+      result: 'Oh wow, the deployment was late. Shocking. Nobody saw that coming. Features delayed? Groundbreaking.',
+      accent: T.red, accentGlow: T.redGlow,
+    },
+    {
+      command: '> write like a pirate',
+      source: 'The database migration was completed successfully overnight.',
+      result: "Arrr! We hauled the data treasure to new shores by moonlight, not a row lost to Davy Jones!",
+      accent: T.green, accentGlow: T.greenGlow,
+    },
+    {
+      command: '> make it sarcastic',
+      source: 'The meeting could have been an email but we appreciate everyone attending.',
+      result: 'What a productive use of everyones time. Truly. That meeting was definitely worth stopping real work for.',
+      accent: T.red, accentGlow: T.redGlow,
+    },
+    {
+      command: '> rewrite as a pirate',
+      source: 'Please review the pull request and approve it before end of day.',
+      result: "Aye, cast yer eyes over me code scrolls and stamp yer seal before the sun hits the horizon, savvy?",
+      accent: T.green, accentGlow: T.greenGlow,
+    },
+    {
+      command: '> add more sarcasm',
+      source: 'We are excited to announce another mandatory training session this Friday.',
+      result: 'Great news everyone! Another Friday training session. Because clearly we all have nothing better to do.',
+      accent: T.red, accentGlow: T.redGlow,
+    },
+    {
+      command: '> make it pirate speak',
+      source: 'The server went down for two hours but the team restored it quickly.',
+      result: "Blimey! The ship sank for two bells but me hearty crew patched the hull and we sailed again!",
+      accent: T.green, accentGlow: T.greenGlow,
+    },
+  ];
+
+  const mono = "'IBM Plex Mono', 'SF Mono', monospace";
+
+  function S() { return Math.max(0.45, W / 600); }
+
+  /* ── Grid ── */
+  function drawGrid() {
+    const s = S();
+    const sp = 40 * Math.max(0.6, s);
+    ctx.strokeStyle = T.border;
+    ctx.lineWidth = 0.5;
+    ctx.globalAlpha = 0.4;
+    for (let x = 0; x < W; x += sp) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = 0; y < H; y += sp) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /* ── Glow helper ── */
+  function drawGlow(x, y, radius, color) {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, radius);
+    g.addColorStop(0, color);
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  /* ── Word wrap ── */
+  function wrapText(text, fontSize, maxW) {
+    ctx.font = `500 ${fontSize}px ${mono}`;
+    const words = text.split(' ');
+    const lines = []; let line = '';
+    for (const word of words) {
+      const test = line ? line + ' ' + word : word;
+      if (ctx.measureText(test).width > maxW) { if (line) lines.push(line); line = word; }
+      else line = test;
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  /* ── Main draw ── */
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+
+    // Background
+    ctx.fillStyle = T.bg;
+    ctx.fillRect(0, 0, W, H);
+    drawGrid();
+
+    const s = S();
+    const cycleDur = 10;
+    const idx = Math.floor(t / cycleDur) % REWRITES.length;
+    const cycleT = (t % cycleDur) / cycleDur;
+    const rw = REWRITES[idx];
+    const accent = rw.accent;
+    const accentGlow = rw.accentGlow;
+
+    const margin = Math.max(12, 20 * s);
+    const maxTextW = W - margin * 2;
+    const cmdFs = Math.max(13, 18 * s);
+    const srcFs = Math.max(12, 15 * s);
+    const lineH = Math.max(18, 22 * s);
+    const labelFs = Math.max(9, 11 * s);
+
+    /* ── Phase: Command typing (0–10%) ── */
+    const cmdY = Math.max(28, 38 * s);
+    const cmdProgress = Math.min(1, cycleT / 0.10);
+    const cmdVisible = Math.floor(cmdProgress * rw.command.length);
+    const cmdText = rw.command.slice(0, cmdVisible);
+
+    // Command background
+    ctx.fillStyle = T.surface; ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    const rx = margin - 6, ry = cmdY - cmdFs, rw2 = maxTextW + 12, rh = cmdFs * 2;
+    ctx.roundRect(rx, ry, rw2, rh, 4 * s);
+    ctx.fill(); ctx.globalAlpha = 1;
+
+    // Command text
+    ctx.font = `600 ${cmdFs}px ${mono}`; ctx.textAlign = 'left';
+    ctx.fillStyle = accent;
+    ctx.shadowColor = accentGlow; ctx.shadowBlur = 10 * s;
+    ctx.fillText(cmdText, margin, cmdY);
+    ctx.shadowBlur = 0;
+
+    // Blinking cursor
+    if (cmdProgress < 1 || (cycleT < 0.15 && Math.sin(t * 8) > 0)) {
+      const cx = margin + ctx.measureText(cmdText).width + 2;
+      ctx.fillStyle = accent; ctx.fillRect(cx, cmdY - cmdFs * 0.75, 5 * s, cmdFs);
+    }
+
+    /* ── Phase: Source text + dissolve (15–38%) ── */
+    const srcY = cmdY + cmdFs * 2.8;
+    const srcLines = wrapText(rw.source, srcFs, maxTextW);
+    const dissolveP = cycleT < 0.15 ? 0 : Math.min(1, (cycleT - 0.15) / 0.23);
+
+    if (dissolveP < 1) {
+      // Label
+      ctx.font = `400 ${labelFs}px ${mono}`; ctx.fillStyle = T.textMut;
+      ctx.fillText('SOURCE', margin, srcY - lineH * 0.7);
+
+      ctx.font = `500 ${srcFs}px ${mono}`; ctx.textAlign = 'left';
+      for (let li = 0; li < srcLines.length; li++) {
+        const line = srcLines[li], ly = srcY + li * lineH;
+        for (let ci = 0; ci < line.length; ci++) {
+          if (line[ci] === ' ') continue;
+          const cp = Math.min(1, Math.max(0, dissolveP * 1.5 - (ci / line.length) * 0.5));
+          let ch = line[ci], al = 1;
+          if (cp > 0 && cp < 0.7) {
+            if (Math.random() < (cp / 0.7) * 0.8) ch = SCRAMBLE[Math.floor(Math.random() * SCRAMBLE.length)];
+          } else if (cp >= 0.7) {
+            al = Math.max(0, 1 - (cp - 0.7) / 0.3);
+            ch = SCRAMBLE[Math.floor(Math.random() * SCRAMBLE.length)];
+          }
+          ctx.globalAlpha = al;
+          ctx.fillStyle = cp > 0 ? T.textMut : T.textSec;
+          ctx.fillText(ch, margin + ctx.measureText(line.slice(0, ci)).width, ly);
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    /* ── Phase: Divider line ── */
+    const divY = srcY + srcLines.length * lineH + 10 * s;
+    if (cycleT > 0.15) {
+      const ap = Math.min(1, (cycleT - 0.15) / 0.15);
+      ctx.save(); ctx.translate(W / 2, divY);
+      const lw = Math.min(50, W * 0.12) * ap;
+
+      ctx.beginPath(); ctx.moveTo(-lw, 0); ctx.lineTo(lw, 0);
+      ctx.strokeStyle = accent; ctx.lineWidth = 1; ctx.globalAlpha = 0.5;
+      ctx.stroke(); ctx.globalAlpha = 1;
+
+      // Particles on divider
+      for (let i = 0; i < 5; i++) {
+        const dt = ((t * 2 + i * 0.4) % 2) / 2;
+        const dx = -lw + dt * lw * 2;
+        if (dx >= -lw && dx <= lw) {
+          drawGlow(dx, 0, 5 * s, accentGlow);
+          ctx.beginPath(); ctx.arc(dx, 0, 1.5 * s, 0, Math.PI * 2);
+          ctx.fillStyle = accent; ctx.fill();
+        }
+      }
+
+      // Label on divider
+      const sl = rw.command.replace('> ', '').toUpperCase();
+      ctx.font = `600 ${labelFs}px ${mono}`;
+      const slw = ctx.measureText(sl).width;
+      ctx.fillStyle = T.bg; ctx.fillRect(-slw / 2 - 5, -labelFs * 0.8, slw + 10, labelFs * 1.6);
+      ctx.fillStyle = accent; ctx.textAlign = 'center'; ctx.fillText(sl, 0, labelFs * 0.3);
+      ctx.restore();
+    }
+
+    /* ── Phase: Result typing (38–65%) ── */
+    const resultY = divY + 35 * s;
+    const resultLines = wrapText(rw.result, srcFs, maxTextW);
+    if (cycleT > 0.38) {
+      const tp = Math.min(1, (cycleT - 0.38) / 0.27);
+      const vc = Math.floor(tp * rw.result.length);
+
+      // Label
+      ctx.font = `400 ${labelFs}px ${mono}`; ctx.textAlign = 'left';
+      ctx.fillStyle = accent; ctx.globalAlpha = 0.7;
+      ctx.fillText('RESULT', margin, resultY - lineH * 0.7); ctx.globalAlpha = 1;
+
+      ctx.font = `500 ${srcFs}px ${mono}`;
+      let cc = 0;
+      for (let li = 0; li < resultLines.length; li++) {
+        const line = resultLines[li], ly = resultY + li * lineH;
+        for (let ci = 0; ci < line.length; ci++) {
+          if (cc >= vc) break;
+          const isRecent = cc > vc - 3;
+          ctx.fillStyle = isRecent ? T.text : T.textSec;
+          if (isRecent) { ctx.shadowColor = accent; ctx.shadowBlur = 4 * s; }
+          ctx.fillText(line[ci], margin + ctx.measureText(line.slice(0, ci)).width, ly);
+          ctx.shadowBlur = 0; cc++;
+        }
+        if (cc >= vc) break;
+      }
+
+      // Typing cursor
+      if (tp < 1 || (cycleT < 0.70 && Math.sin(t * 10) > 0)) {
+        let cl = 0, rem = vc;
+        for (let li = 0; li < resultLines.length; li++) {
+          if (rem <= resultLines[li].length) { cl = li; break; }
+          rem -= resultLines[li].length;
+        }
+        ctx.font = `500 ${srcFs}px ${mono}`;
+        const cx = margin + ctx.measureText((resultLines[cl] || '').slice(0, rem)).width + 2;
+        ctx.fillStyle = accent;
+        ctx.fillRect(cx, resultY + cl * lineH - srcFs * 0.75, 2 * s, srcFs);
+      }
+    }
+
+    /* ── Footer: phase dots ── */
+    const stFs = Math.max(6, 7 * s);
+    ctx.font = `500 ${stFs}px ${mono}`; ctx.textAlign = 'center';
+    ctx.fillStyle = T.textMut;
+    ctx.fillText('STYLE REWRITER', margin + 50 * s, H - 10 * s);
+
+    const phases = ['CMD', 'DISSOLVE', 'REWRITE', 'DONE'];
+    const phIdx = cycleT < 0.10 ? 0 : cycleT < 0.38 ? 1 : cycleT < 0.65 ? 2 : 3;
+    const phGap = Math.max(18, 26 * s);
+    const phStart = W - phases.length * phGap - margin;
+    for (let i = 0; i < phases.length; i++) {
+      const dx = phStart + i * phGap;
+      ctx.beginPath(); ctx.arc(dx, H - 12 * s, 2.5 * s, 0, Math.PI * 2);
+      ctx.fillStyle = i === phIdx ? accent : T.border; ctx.fill();
+      ctx.font = `400 ${Math.max(5, 6 * s)}px ${mono}`;
+      ctx.fillStyle = i === phIdx ? accent : T.textMut; ctx.textAlign = 'center';
+      ctx.fillText(phases[i], dx, H - 4 * s);
+    }
+  }
+
+  /* ── Animation loop ── */
+  let start = null;
+  function frame(ts) {
+    if (!start) start = ts;
+    draw((ts - start) / 1000);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

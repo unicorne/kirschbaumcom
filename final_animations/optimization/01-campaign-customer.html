@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Optimization — Campaign Customer</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #08090d;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; overflow: hidden;
+    font-family: 'IBM Plex Mono', -apple-system, monospace;
+  }
+  .wrap { width: 94vw; max-width: 900px; }
+  canvas { display: block; width: 100%; height: 380px; border-radius: 8px; background: #0d1117; }
+  .meta {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 2px; color: #484f58; font-size: 10px; letter-spacing: 0.1em;
+  }
+  .meta span { color: #58a6ff; }
+  @media (max-width: 600px) { canvas { height: 280px; } }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="wrap">
+  <div class="meta">
+    <div>OPTIMIZATION <span>/ CAMPAIGN CUSTOMER</span></div>
+    <div>EXAMPLE 01</div>
+  </div>
+  <canvas id="c"></canvas>
+</div>
+<script>
+(() => {
+  const T = {
+    void: '#08090d', bg: '#0d1117', surface: '#161b22',
+    border: '#21262d', borderLight: '#30363d',
+    blue: '#58a6ff', blueGlow: 'rgba(88,166,255,0.35)', blueDim: 'rgba(88,166,255,0.08)',
+    cyan: '#39d2c0', cyanGlow: 'rgba(57,210,192,0.35)',
+    green: '#3fb950', greenGlow: 'rgba(63,185,80,0.3)',
+    red: '#f85149', redGlow: 'rgba(248,81,73,0.4)',
+    amber: '#d29922', amberGlow: 'rgba(210,153,34,0.3)',
+    purple: '#bc8cff', purpleGlow: 'rgba(188,140,255,0.3)',
+    text: '#e6edf3', textSec: '#8b949e', textMut: '#484f58',
+  };
+  // --- Color override via postMessage ---
+  function _hexToRgb(h){h=h.replace("#","");return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+  function _rgba(hex,a){const[r,g,b]=_hexToRgb(hex);return "rgba("+r+","+g+","+b+","+a+")";}
+  window.addEventListener("message",function(e){
+    if(e.data&&e.data.type==="theme"){
+      var c=e.data.colors;
+      if(c.blue){T.blue=c.blue;T.blueGlow=_rgba(c.blue,0.35);T.blueDim=_rgba(c.blue,0.08);}
+      if(c.cyan){T.cyan=c.cyan;T.cyanGlow=_rgba(c.cyan,0.35);T.cyanDim=_rgba(c.cyan,0.08);}
+      if(c.green){T.green=c.green;T.greenGlow=_rgba(c.green,0.3);T.greenDim=_rgba(c.green,0.08);}
+      if(c.red){T.red=c.red;T.redGlow=_rgba(c.red,0.4);}
+      if(c.amber){T.amber=c.amber;T.amberGlow=_rgba(c.amber,0.3);T.amberDim=_rgba(c.amber,0.08);}
+      if(c.purple){T.purple=c.purple;T.purpleGlow=_rgba(c.purple,0.3);T.purpleDim=_rgba(c.purple,0.08);}
+      if(c.bg){T.bg=c.bg;var cv=document.querySelector("canvas");if(cv)cv.style.background=c.bg;}
+      if(c.void){T.void=c.void;document.body.style.background=c.void;}
+      if(c.surface)T.surface=c.surface;
+      if(c.border)T.border=c.border;
+      if(c.borderLight)T.borderLight=c.borderLight;
+      if(c.text)T.text=c.text;
+      if(c.textSec)T.textSec=c.textSec;
+      if(c.textMut){T.textMut=c.textMut;var m=document.querySelector(".meta");if(m)m.style.color=c.textMut;}
+    }
+  });
+
+  let mobile = window.innerWidth < 600;
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    mobile = window.innerWidth < 600;
+    const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 2 : 3);
+    const r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function S(w) { return Math.max(0.45, w / 600); }
+  function shadow(c, b) { if (!mobile) { ctx.shadowColor = c; ctx.shadowBlur = b; } }
+  function drawGlow(x, y, r, c) {
+    if (mobile) r *= 0.6;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, c); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+  function lerp(a, b, t) { return a + (b - a) * Math.max(0, Math.min(1, t)); }
+  function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+
+  /* ── Seeded random ── */
+  let seed = 51;
+  function srand() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+  function srandReset() { seed = 51; }
+
+  /* ── Matrix data ── */
+  const ROWS = 5; // campaigns/channels
+  const COLS = 6; // customer segments
+  const rowLabels = ['EMAIL', 'SOCIAL', 'SEARCH', 'DISPLAY', 'VIDEO'];
+  const colLabels = ['ENT', 'SMB', 'START', 'CONS', 'PRO', 'EDU'];
+
+  // Generate value matrix (each cell = ROI/value for that campaign×segment pair)
+  srandReset();
+  const matrix = [];
+  for (let r = 0; r < ROWS; r++) {
+    const row = [];
+    for (let c = 0; c < COLS; c++) {
+      row.push(Math.round(10 + srand() * 90)); // values 10-100
+    }
+    matrix.push(row);
+  }
+
+  // Find optimal assignment: for each column pick the best row (greedy per-column max)
+  // This simulates finding the best campaign channel for each customer segment
+  const optimalCells = []; // {r, c} pairs representing the optimal selection
+  const colMax = [];
+  for (let c = 0; c < COLS; c++) {
+    let bestR = 0, bestV = 0;
+    for (let r = 0; r < ROWS; r++) {
+      if (matrix[r][c] > bestV) { bestV = matrix[r][c]; bestR = r; }
+    }
+    optimalCells.push({ r: bestR, c });
+    colMax.push(bestV);
+  }
+
+  // Pre-compute the search order: the optimizer scans cells in a deliberate pattern
+  // It goes column by column, testing each row, then locks in the best
+  const searchOrder = [];
+  for (let c = 0; c < COLS; c++) {
+    for (let r = 0; r < ROWS; r++) {
+      searchOrder.push({ r, c });
+    }
+  }
+
+  // Total values
+  let initialTotal = 0;
+  for (let c = 0; c < COLS; c++) initialTotal += matrix[0][c]; // naive: always pick first row
+  let optimalTotal = 0;
+  for (const om of optimalCells) optimalTotal += matrix[om.r][om.c];
+
+  /* ── Timing (11s loop) ── */
+  const CYCLE = 11;
+  const SCAN_START = 0.8;
+  const SCAN_END = 7.5;
+  const LOCK_START = 7.5;
+  const LOCK_END = 8.5;
+  const HOLD_END = 10.0;
+  const FADE_START = 10.0;
+
+  function draw(ts) {
+    if (!draw.start) draw.start = ts;
+    const rawT = (ts - draw.start) / 1000;
+    const ct = rawT % CYCLE;
+    const s = S(W);
+    ctx.clearRect(0, 0, W, H);
+
+    const fadeOut = ct > FADE_START ? Math.max(0, 1 - (ct - FADE_START) / (CYCLE - FADE_START)) : 1;
+
+    /* ── Layout ── */
+    const labelW = 55 * s;  // space for row labels
+    const labelH = 28 * s;  // space for column labels
+    const padL = 20 * s + labelW;
+    const padR = 20 * s;
+    const padT = 42 * s + labelH;
+    const padB = 30 * s;
+    const gridW = W - padL - padR;
+    const gridH = H - padT - padB;
+    const cellW = gridW / COLS;
+    const cellH = gridH / ROWS;
+
+    /* ── Background grid ── */
+    ctx.strokeStyle = T.border; ctx.lineWidth = 0.5;
+    ctx.globalAlpha = mobile ? 0.1 : 0.15;
+    const gsp = 25 * s;
+    for (let y = 0; y < H; y += gsp) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+    if (!mobile) {
+      for (let x = 0; x < W; x += gsp) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    /* ── Scan progress ── */
+    const scanP = Math.max(0, Math.min(1, (ct - SCAN_START) / (SCAN_END - SCAN_START)));
+    const totalCells = ROWS * COLS;
+    const scannedCount = Math.floor(scanP * totalCells);
+    const lockP = Math.max(0, Math.min(1, (ct - LOCK_START) / (LOCK_END - LOCK_START)));
+    const lockE = easeInOut(lockP);
+
+    /* ── Column labels (segment names) ── */
+    ctx.font = `500 ${Math.max(7, 9 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.textAlign = 'center';
+    for (let c = 0; c < COLS; c++) {
+      const cx = padL + c * cellW + cellW / 2;
+      const cy = padT - 10 * s;
+
+      // Highlight column if its optimal cell is locked
+      const isOptCol = lockP > 0 && optimalCells.some(o => o.c === c);
+      ctx.fillStyle = isOptCol ? T.cyan : T.textMut;
+      ctx.globalAlpha = fadeOut * (isOptCol ? (0.7 + lockE * 0.3) : 0.6);
+      ctx.fillText(colLabels[c], cx, cy);
+    }
+    ctx.globalAlpha = 1;
+
+    /* ── Row labels (channel names) ── */
+    ctx.textAlign = 'right';
+    for (let r = 0; r < ROWS; r++) {
+      const rx = padL - 10 * s;
+      const ry = padT + r * cellH + cellH / 2 + 3 * s;
+
+      const isOptRow = lockP > 0 && optimalCells.some(o => o.r === r);
+      ctx.fillStyle = isOptRow ? T.blue : T.textMut;
+      ctx.globalAlpha = fadeOut * (isOptRow ? (0.7 + lockE * 0.3) : 0.6);
+      ctx.font = `500 ${Math.max(7, 9 * s)}px 'IBM Plex Mono', monospace`;
+      ctx.fillText(rowLabels[r], rx, ry);
+    }
+    ctx.globalAlpha = 1;
+
+    /* ── Matrix cells ── */
+    // Track current scan cell for highlight
+    const currentScanIdx = Math.min(scannedCount, totalCells - 1);
+    const currentScanR = searchOrder[currentScanIdx]?.r ?? 0;
+    const currentScanC = searchOrder[currentScanIdx]?.c ?? 0;
+
+    // Track the best-so-far per column during scan
+    const bestPerCol = new Array(COLS).fill(-1);
+    const bestValPerCol = new Array(COLS).fill(0);
+    for (let i = 0; i < scannedCount && i < totalCells; i++) {
+      const { r, c } = searchOrder[i];
+      if (matrix[r][c] > bestValPerCol[c]) {
+        bestValPerCol[c] = matrix[r][c];
+        bestPerCol[c] = r;
+      }
+    }
+
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const cx = padL + c * cellW;
+        const cy = padT + r * cellH;
+        const val = matrix[r][c];
+        const cellIdx = c * ROWS + r; // matches searchOrder
+        const isScanned = cellIdx < scannedCount;
+        const isCurrent = scanP < 1 && cellIdx === scannedCount;
+        const isOptimal = optimalCells.some(o => o.r === r && o.c === c);
+        const isBestSoFar = bestPerCol[c] === r && isScanned;
+
+        // Cell background
+        const inset = 2 * s;
+        const cw = cellW - inset * 2;
+        const ch = cellH - inset * 2;
+
+        if (isOptimal && lockP > 0) {
+          // Optimal cell: glow green/cyan
+          const intensity = 0.15 + lockE * 0.4;
+          ctx.fillStyle = `rgba(57,210,192,${intensity})`;
+          ctx.globalAlpha = fadeOut;
+          ctx.beginPath();
+          ctx.roundRect(cx + inset, cy + inset, cw, ch, 3 * s);
+          ctx.fill();
+
+          // Border
+          ctx.strokeStyle = T.cyan;
+          ctx.lineWidth = 1.5 * s;
+          ctx.globalAlpha = fadeOut * lockE;
+          shadow(T.cyanGlow, 8 * s);
+          ctx.beginPath();
+          ctx.roundRect(cx + inset, cy + inset, cw, ch, 3 * s);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        } else if (isCurrent) {
+          // Currently scanning: amber highlight
+          const pulse = 0.5 + Math.sin(rawT * 10) * 0.3;
+          ctx.fillStyle = `rgba(210,153,34,${0.15 + pulse * 0.15})`;
+          ctx.globalAlpha = fadeOut;
+          ctx.beginPath();
+          ctx.roundRect(cx + inset, cy + inset, cw, ch, 3 * s);
+          ctx.fill();
+
+          ctx.strokeStyle = T.amber;
+          ctx.lineWidth = 1.2 * s;
+          shadow(T.amberGlow, 6 * s);
+          ctx.beginPath();
+          ctx.roundRect(cx + inset, cy + inset, cw, ch, 3 * s);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        } else if (isBestSoFar && scanP < 1) {
+          // Best so far in this column during scan: dim cyan
+          ctx.fillStyle = 'rgba(57,210,192,0.08)';
+          ctx.globalAlpha = fadeOut;
+          ctx.beginPath();
+          ctx.roundRect(cx + inset, cy + inset, cw, ch, 3 * s);
+          ctx.fill();
+
+          ctx.strokeStyle = T.cyan;
+          ctx.lineWidth = 0.8 * s;
+          ctx.globalAlpha = fadeOut * 0.4;
+          ctx.setLineDash([2 * s, 2 * s]);
+          ctx.beginPath();
+          ctx.roundRect(cx + inset, cy + inset, cw, ch, 3 * s);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        } else if (isScanned) {
+          // Scanned: value-based heatmap fill
+          const norm = (val - 10) / 90; // 0-1
+          const intensity = 0.03 + norm * 0.12;
+          const rr = Math.round(lerp(22, 88, norm));
+          const gg = Math.round(lerp(27, 166, norm));
+          const bb = Math.round(lerp(34, 255, norm));
+          ctx.fillStyle = `rgba(${rr},${gg},${bb},${intensity})`;
+          ctx.globalAlpha = fadeOut;
+          ctx.beginPath();
+          ctx.roundRect(cx + inset, cy + inset, cw, ch, 3 * s);
+          ctx.fill();
+        }
+
+        // Cell border (always)
+        ctx.strokeStyle = T.border;
+        ctx.lineWidth = 0.5;
+        ctx.globalAlpha = fadeOut * 0.35;
+        ctx.beginPath();
+        ctx.roundRect(cx + inset, cy + inset, cw, ch, 3 * s);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+
+        // Value text
+        const fontSize = Math.max(9, 12 * s);
+        ctx.font = `600 ${fontSize}px 'IBM Plex Mono', monospace`;
+        ctx.textAlign = 'center';
+
+        let textColor = T.textMut;
+        let textAlpha = 0.25;
+
+        if (isOptimal && lockP > 0) {
+          textColor = T.cyan;
+          textAlpha = 0.7 + lockE * 0.3;
+        } else if (isCurrent) {
+          textColor = T.amber;
+          textAlpha = 0.9;
+        } else if (isScanned) {
+          const norm = (val - 10) / 90;
+          textColor = norm > 0.6 ? T.blue : T.textSec;
+          textAlpha = 0.4 + norm * 0.4;
+        }
+
+        ctx.fillStyle = textColor;
+        ctx.globalAlpha = fadeOut * textAlpha;
+        ctx.fillText(val.toString(), cx + cellW / 2, cy + cellH / 2 + fontSize * 0.35);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    /* ── Scan beam (vertical line sweeping across columns) ── */
+    if (scanP > 0 && scanP < 1) {
+      const currentCol = Math.floor(scannedCount / ROWS);
+      const beamX = padL + currentCol * cellW + cellW / 2;
+
+      ctx.strokeStyle = T.amber;
+      ctx.lineWidth = 1 * s;
+      ctx.globalAlpha = 0.3 + Math.sin(rawT * 6) * 0.15;
+      ctx.setLineDash([3 * s, 3 * s]);
+      ctx.beginPath();
+      ctx.moveTo(beamX, padT - 5 * s);
+      ctx.lineTo(beamX, padT + gridH + 5 * s);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
+
+    /* ── Top-left label ── */
+    ctx.font = `500 ${Math.max(8, 10 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = T.textMut; ctx.textAlign = 'left';
+    ctx.globalAlpha = fadeOut;
+    ctx.fillText('CAMPAIGN OPTIMIZER', 28 * s, 18 * s);
+
+    // Status dot
+    const isScanning = ct >= SCAN_START && ct < SCAN_END;
+    const isLocking = ct >= LOCK_START && ct < LOCK_END;
+    const isComplete = ct >= LOCK_END && ct < FADE_START;
+    const pulse = Math.sin(rawT * 5) > 0;
+    ctx.beginPath();
+    ctx.arc(14 * s, 15 * s, Math.max(3, 4 * s), 0, Math.PI * 2);
+    ctx.fillStyle = isScanning ? (pulse ? T.amber : T.textMut) : (isComplete ? T.green : (isLocking ? T.cyan : T.textMut));
+    ctx.fill();
+
+    // Phase text
+    ctx.font = `400 ${Math.max(7, 8 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = T.textMut;
+    let phaseText = 'IDLE';
+    if (isScanning) phaseText = 'SCANNING';
+    else if (isLocking) phaseText = 'LOCKING OPTIMUM';
+    else if (isComplete) phaseText = 'OPTIMAL FOUND';
+    ctx.fillText(phaseText, 28 * s, 30 * s);
+
+    /* ── Top-right: current total value ── */
+    let currentTotal = 0;
+    if (scanP >= 1 && lockP > 0) {
+      currentTotal = Math.round(lerp(initialTotal, optimalTotal, lockE));
+    } else if (scannedCount > 0) {
+      // Sum of best-so-far per completed column
+      let completedCols = Math.floor(scannedCount / ROWS);
+      for (let c = 0; c < completedCols; c++) {
+        currentTotal += bestValPerCol[c] > 0 ? bestValPerCol[c] : matrix[0][c];
+      }
+      for (let c = completedCols; c < COLS; c++) {
+        currentTotal += matrix[0][c]; // naive default
+      }
+    } else {
+      currentTotal = initialTotal;
+    }
+
+    ctx.textAlign = 'right';
+    ctx.font = `600 ${Math.max(12, 16 * s)}px 'IBM Plex Mono', monospace`;
+    const valColor = lockP > 0.5 ? T.green : (scanP > 0 ? T.blue : T.textSec);
+    ctx.fillStyle = valColor;
+    if (lockP > 0.5) shadow(T.greenGlow, 8 * s);
+    ctx.fillText(currentTotal.toString(), W - 14 * s, 20 * s);
+    ctx.shadowBlur = 0;
+
+    ctx.font = `400 ${Math.max(7, 8 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = T.textMut;
+    ctx.fillText('TOTAL VALUE', W - 14 * s, 32 * s);
+
+    // Show improvement percentage when locked
+    if (lockP > 0.3) {
+      const improvement = ((optimalTotal - initialTotal) / initialTotal * 100).toFixed(0);
+      ctx.font = `500 ${Math.max(8, 10 * s)}px 'IBM Plex Mono', monospace`;
+      ctx.fillStyle = T.green;
+      ctx.globalAlpha = fadeOut * Math.min(1, (lockP - 0.3) * 3);
+      ctx.fillText(`+${improvement}%`, W - 14 * s, 44 * s);
+    }
+
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

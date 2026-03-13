@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Knowledge — Web Scraping Pipeline</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #08090d;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; overflow: hidden;
+    font-family: 'IBM Plex Mono', -apple-system, monospace;
+  }
+  .wrap { width: 94vw; max-width: 900px; }
+  canvas { display: block; width: 100%; height: 520px; border-radius: 8px; background: #0d1117; }
+  .meta {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 2px; color: #484f58; font-size: 10px; letter-spacing: 0.1em;
+  }
+  .meta span { color: #39d2c0; }
+  @media (max-width: 600px) { canvas { height: 420px; } }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="wrap">
+  <div class="meta">
+    <div>KNOWLEDGE <span>/ WEB SCRAPING</span></div>
+    <div>EXAMPLE 02</div>
+  </div>
+  <canvas id="c"></canvas>
+</div>
+
+<script>
+(() => {
+  const T = {
+    void: '#08090d', bg: '#0d1117', surface: '#161b22',
+    border: '#21262d', borderLight: '#30363d',
+    blue: '#58a6ff', blueGlow: 'rgba(88,166,255,0.35)',
+    cyan: '#39d2c0', cyanGlow: 'rgba(57,210,192,0.35)',
+    green: '#3fb950', greenGlow: 'rgba(63,185,80,0.3)',
+    purple: '#bc8cff', purpleGlow: 'rgba(188,140,255,0.35)',
+    amber: '#d29922', amberGlow: 'rgba(210,153,34,0.3)',
+    red: '#f85149',
+    text: '#e6edf3', textSec: '#8b949e', textMut: '#484f58',
+  };
+  // --- Color override via postMessage ---
+  function _hexToRgb(h){h=h.replace("#","");return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+  function _rgba(hex,a){const[r,g,b]=_hexToRgb(hex);return "rgba("+r+","+g+","+b+","+a+")";}
+  window.addEventListener("message",function(e){
+    if(e.data&&e.data.type==="theme"){
+      var c=e.data.colors;
+      if(c.blue){T.blue=c.blue;T.blueGlow=_rgba(c.blue,0.35);T.blueDim=_rgba(c.blue,0.08);}
+      if(c.cyan){T.cyan=c.cyan;T.cyanGlow=_rgba(c.cyan,0.35);T.cyanDim=_rgba(c.cyan,0.08);}
+      if(c.green){T.green=c.green;T.greenGlow=_rgba(c.green,0.3);T.greenDim=_rgba(c.green,0.08);}
+      if(c.red){T.red=c.red;T.redGlow=_rgba(c.red,0.4);}
+      if(c.amber){T.amber=c.amber;T.amberGlow=_rgba(c.amber,0.3);T.amberDim=_rgba(c.amber,0.08);}
+      if(c.purple){T.purple=c.purple;T.purpleGlow=_rgba(c.purple,0.3);T.purpleDim=_rgba(c.purple,0.08);}
+      if(c.bg){T.bg=c.bg;var cv=document.querySelector("canvas");if(cv)cv.style.background=c.bg;}
+      if(c.void){T.void=c.void;document.body.style.background=c.void;}
+      if(c.surface)T.surface=c.surface;
+      if(c.border)T.border=c.border;
+      if(c.borderLight)T.borderLight=c.borderLight;
+      if(c.text)T.text=c.text;
+      if(c.textSec)T.textSec=c.textSec;
+      if(c.textMut){T.textMut=c.textMut;var m=document.querySelector(".meta");if(m)m.style.color=c.textMut;}
+    }
+  });
+
+  let mobile = window.innerWidth < 600;
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    mobile = window.innerWidth < 600;
+    const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 2 : 3);
+    const r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function S(w) { return Math.max(0.45, w / 600); }
+  function shadow(c, b) { if (!mobile) { ctx.shadowColor = c; ctx.shadowBlur = b; } }
+  function drawGlow(x, y, r, c) {
+    if (mobile) r *= 0.6;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, c); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+  function colorAlpha(hex, a) {
+    if (hex.startsWith('rgba')) return hex.replace(/[\d.]+\)$/, `${a})`);
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+
+  /* ═══════════════════════════════════════════
+     SCRAPING SCENARIOS
+     ═══════════════════════════════════════════ */
+  const SCENARIOS = [
+    {
+      urls: [
+        { url: 'docs.example.com/api/v3', status: 200, size: '24KB' },
+        { url: 'blog.example.com/posts', status: 200, size: '18KB' },
+        { url: 'wiki.example.com/setup', status: 200, size: '31KB' },
+        { url: 'forum.example.com/faq', status: 301, size: '—' },
+        { url: 'help.example.com/guide', status: 200, size: '12KB' },
+      ],
+      extracted: [
+        { type: 'HEADING', content: 'API Reference v3.2' },
+        { type: 'TABLE', content: '4 endpoints × 12 fields' },
+        { type: 'CODE', content: 'curl -X POST /api/users' },
+        { type: 'TEXT', content: 'Authentication requires Bearer token...' },
+        { type: 'LIST', content: '8 configuration parameters' },
+        { type: 'LINK', content: '→ 14 internal references found' },
+      ],
+      stats: { pages: 5, elements: 847, tokens: '12.4K' },
+    },
+    {
+      urls: [
+        { url: 'news.techsite.io/ai', status: 200, size: '42KB' },
+        { url: 'news.techsite.io/ml', status: 200, size: '38KB' },
+        { url: 'news.techsite.io/data', status: 403, size: '—' },
+        { url: 'archive.techsite.io/2024', status: 200, size: '56KB' },
+        { url: 'rss.techsite.io/feed', status: 200, size: '8KB' },
+      ],
+      extracted: [
+        { type: 'ARTICLE', content: 'New transformer architecture...' },
+        { type: 'META', content: 'author, date, tags, category' },
+        { type: 'IMAGE', content: '3 diagrams with alt text' },
+        { type: 'TEXT', content: 'Benchmark results show 15% improvement...' },
+        { type: 'TABLE', content: '6 models × 4 metrics' },
+        { type: 'LINK', content: '→ 22 external citations found' },
+      ],
+      stats: { pages: 4, elements: 1203, tokens: '18.7K' },
+    },
+  ];
+
+  const cycleDur = 18;
+
+  /* Phases:
+     0.00 - 0.05  Idle
+     0.05 - 0.30  Crawling (URLs fetched one by one)
+     0.30 - 0.35  Parse transition
+     0.35 - 0.60  Parsing / extraction (elements appear)
+     0.60 - 0.65  Structuring transition
+     0.65 - 0.82  Structuring / storing (data flows into store)
+     0.82 - 0.88  Complete
+     0.88 - 1.00  Fade out
+  */
+
+  // Data flow particles
+  let particles = [];
+  let lastSpawnT = 0;
+
+  function spawnParticle(x1, y1, x2, y2, color) {
+    particles.push({
+      x1, y1, x2, y2, color,
+      birth: performance.now() / 1000,
+      dur: 0.5 + Math.random() * 0.4,
+      offset: (Math.random() - 0.5) * 12,
+      size: 1.5 + Math.random() * 1.5,
+    });
+  }
+
+  function drawParticles(t, s) {
+    particles = particles.filter(p => t - p.birth < p.dur);
+    for (const p of particles) {
+      const prog = (t - p.birth) / p.dur;
+      const ease = prog < 0.5 ? 2 * prog * prog : 1 - Math.pow(-2 * prog + 2, 2) / 2;
+      const x = p.x1 + (p.x2 - p.x1) * ease;
+      const y = p.y1 + (p.y2 - p.y1) * ease + p.offset * Math.sin(prog * Math.PI);
+      const alpha = prog < 0.15 ? prog / 0.15 : prog > 0.75 ? (1 - prog) / 0.25 : 1;
+      ctx.beginPath();
+      ctx.arc(x, y, p.size * s, 0, Math.PI * 2);
+      ctx.fillStyle = colorAlpha(p.color, alpha * 0.8);
+      ctx.fill();
+    }
+  }
+
+  /* ═══════════════════════════════════════════
+     DRAW: URL ROW
+     ═══════════════════════════════════════════ */
+  function drawUrlRow(x, y, w, url, status, size, active, fetched, t, s) {
+    const h = mobile ? 22 * s : 26 * s;
+    const fs = Math.max(7, 8 * s);
+
+    // Background
+    ctx.fillStyle = active ? colorAlpha(T.cyan, 0.06) : fetched ? T.surface : colorAlpha(T.surface, 0.3);
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, 3 * s); ctx.fill();
+
+    // Border
+    if (active) {
+      ctx.strokeStyle = colorAlpha(T.cyan, 0.5 + Math.sin(t * 6) * 0.3);
+      ctx.lineWidth = 1.5;
+    } else {
+      ctx.strokeStyle = T.border;
+      ctx.lineWidth = 1;
+    }
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, 3 * s); ctx.stroke();
+
+    // Status indicator
+    const dotX = x + 10 * s;
+    const dotY = y + h / 2;
+    ctx.beginPath();
+    ctx.arc(dotX, dotY, 3 * s, 0, Math.PI * 2);
+    if (!fetched) {
+      ctx.fillStyle = T.textMut;
+    } else if (status === 200) {
+      ctx.fillStyle = T.green;
+    } else if (status === 301) {
+      ctx.fillStyle = T.amber;
+    } else {
+      ctx.fillStyle = T.red;
+    }
+    ctx.fill();
+
+    // URL text
+    ctx.font = `400 ${fs}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = fetched ? T.text : T.textMut;
+    ctx.textAlign = 'left';
+    const maxTextW = w - 80 * s;
+    let displayUrl = url;
+    while (ctx.measureText(displayUrl).width > maxTextW && displayUrl.length > 0) displayUrl = displayUrl.slice(0, -1);
+    if (displayUrl.length < url.length) displayUrl += '…';
+    ctx.fillText(displayUrl, x + 20 * s, y + h / 2 + fs * 0.35);
+
+    // Status code + size
+    if (fetched) {
+      ctx.textAlign = 'right';
+      ctx.fillStyle = status === 200 ? T.green : status === 301 ? T.amber : T.red;
+      ctx.fillText(`${status}`, x + w - 30 * s, y + h / 2 + fs * 0.35);
+      ctx.fillStyle = T.textMut;
+      ctx.fillText(size, x + w - 6 * s, y + h / 2 + fs * 0.35);
+    }
+
+    // Loading spinner for active
+    if (active) {
+      const spinX = x + w - 50 * s;
+      const spinY = y + h / 2;
+      const spinR = 5 * s;
+      const spinAngle = t * 8;
+      ctx.beginPath();
+      ctx.arc(spinX, spinY, spinR, spinAngle, spinAngle + Math.PI * 1.5);
+      ctx.strokeStyle = T.cyan;
+      ctx.lineWidth = 1.5 * s;
+      ctx.stroke();
+    }
+
+    return h;
+  }
+
+  /* ═══════════════════════════════════════════
+     DRAW: EXTRACTED ELEMENT
+     ═══════════════════════════════════════════ */
+  function drawExtractedElement(x, y, w, el, progress, t, s) {
+    const h = mobile ? 20 * s : 24 * s;
+    const fs = Math.max(6, 7 * s);
+    const typeColors = {
+      HEADING: T.purple, TABLE: T.blue, CODE: T.cyan,
+      TEXT: T.textSec, LIST: T.green, LINK: T.amber,
+      ARTICLE: T.purple, META: T.blue, IMAGE: T.green,
+    };
+    const color = typeColors[el.type] || T.textSec;
+
+    // Slide in from right
+    const slideOffset = (1 - Math.min(1, progress * 3)) * 30 * s;
+    const alpha = Math.min(1, progress * 2);
+
+    ctx.globalAlpha = alpha;
+
+    // Background
+    ctx.fillStyle = colorAlpha(color, 0.05);
+    ctx.beginPath(); ctx.roundRect(x + slideOffset, y, w, h, 3 * s); ctx.fill();
+
+    // Left accent bar
+    ctx.fillStyle = colorAlpha(color, 0.6);
+    ctx.fillRect(x + slideOffset, y, 2.5 * s, h);
+
+    // Type badge
+    ctx.font = `600 ${fs}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = color;
+    ctx.textAlign = 'left';
+    ctx.fillText(el.type, x + slideOffset + 8 * s, y + h / 2 + fs * 0.35);
+
+    // Content
+    ctx.font = `400 ${fs}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = T.textSec;
+    const typeW = ctx.measureText(el.type).width;
+    const maxContentW = w - typeW - 24 * s;
+    let content = el.content;
+    while (ctx.measureText(content).width > maxContentW && content.length > 0) content = content.slice(0, -1);
+    if (content.length < el.content.length) content += '…';
+    ctx.fillText(content, x + slideOffset + typeW + 16 * s, y + h / 2 + fs * 0.35);
+
+    ctx.globalAlpha = 1;
+    return h;
+  }
+
+  /* ═══════════════════════════════════════════
+     DRAW: DATA STORE VISUALIZATION
+     ═══════════════════════════════════════════ */
+  function drawDataStore(cx, cy, w, h, fillProgress, stats, t, s) {
+    const fs = Math.max(6, 7 * s);
+
+    // Cylinder shape (database icon)
+    const cylW = w * 0.6;
+    const cylH = h * 0.5;
+    const cylX = cx - cylW / 2;
+    const cylY = cy - cylH / 2;
+    const ellipseH = cylH * 0.2;
+
+    // Body
+    ctx.fillStyle = colorAlpha(T.green, 0.08 + fillProgress * 0.06);
+    ctx.fillRect(cylX, cylY + ellipseH / 2, cylW, cylH - ellipseH);
+
+    // Fill level
+    const fillH = (cylH - ellipseH) * fillProgress;
+    ctx.fillStyle = colorAlpha(T.green, 0.15 + fillProgress * 0.1);
+    ctx.fillRect(cylX, cylY + cylH - ellipseH / 2 - fillH, cylW, fillH);
+
+    // Top ellipse
+    ctx.beginPath();
+    ctx.ellipse(cx, cylY + ellipseH / 2, cylW / 2, ellipseH / 2, 0, 0, Math.PI * 2);
+    ctx.fillStyle = colorAlpha(T.green, 0.1);
+    ctx.fill();
+    ctx.strokeStyle = colorAlpha(T.green, 0.4 + fillProgress * 0.3);
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Bottom ellipse
+    ctx.beginPath();
+    ctx.ellipse(cx, cylY + cylH - ellipseH / 2, cylW / 2, ellipseH / 2, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = colorAlpha(T.green, 0.3);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Side lines
+    ctx.beginPath();
+    ctx.moveTo(cylX, cylY + ellipseH / 2);
+    ctx.lineTo(cylX, cylY + cylH - ellipseH / 2);
+    ctx.moveTo(cylX + cylW, cylY + ellipseH / 2);
+    ctx.lineTo(cylX + cylW, cylY + cylH - ellipseH / 2);
+    ctx.strokeStyle = colorAlpha(T.green, 0.3);
+    ctx.stroke();
+
+    // Label
+    ctx.font = `600 ${fs}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = T.green;
+    ctx.textAlign = 'center';
+    ctx.fillText('KNOWLEDGE BASE', cx, cylY - 8 * s);
+
+    // Stats below
+    if (fillProgress > 0.1) {
+      const statY = cylY + cylH + 14 * s;
+      ctx.font = `400 ${fs}px 'IBM Plex Mono', monospace`;
+      ctx.fillStyle = T.textMut;
+      ctx.textAlign = 'center';
+      const visPages = Math.ceil(fillProgress * stats.pages);
+      const visElements = Math.ceil(fillProgress * stats.elements);
+      ctx.fillText(`${visPages} pages  ·  ${visElements} elements`, cx, statY);
+      ctx.fillText(`${(parseFloat(stats.tokens) * fillProgress).toFixed(1)}K tokens`, cx, statY + 12 * s);
+    }
+  }
+
+  /* ═══════════════════════════════════════════
+     NETWORK GRAPH (spider/crawl visualization)
+     ═══════════════════════════════════════════ */
+  function drawCrawlGraph(cx, cy, radius, urls, crawlProgress, t, s) {
+    // Center node (crawler)
+    drawGlow(cx, cy, 20 * s, colorAlpha(T.cyan, 0.12));
+    ctx.beginPath();
+    ctx.arc(cx, cy, 6 * s, 0, Math.PI * 2);
+    ctx.fillStyle = T.cyan;
+    ctx.fill();
+
+    const fs = Math.max(6, 6 * s);
+    ctx.font = `400 ${fs}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = T.cyan;
+    ctx.textAlign = 'center';
+    ctx.fillText('CRAWLER', cx, cy - 12 * s);
+
+    // URL nodes radiating out
+    const count = urls.length;
+    const visibleCount = Math.ceil(crawlProgress * count);
+    const activeIdx = Math.floor(crawlProgress * count);
+
+    for (let i = 0; i < visibleCount && i < count; i++) {
+      const angle = -Math.PI / 2 + (i / count) * Math.PI * 2;
+      const dist = radius * 0.7;
+      const nx = cx + Math.cos(angle) * dist;
+      const ny = cy + Math.sin(angle) * dist;
+      const isActive = i === activeIdx;
+      const isDone = i < activeIdx;
+      const url = urls[i];
+
+      // Connection line
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(nx, ny);
+      if (isActive) {
+        ctx.strokeStyle = colorAlpha(T.cyan, 0.4 + Math.sin(t * 6) * 0.2);
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4 * s, 4 * s]);
+      } else {
+        ctx.strokeStyle = colorAlpha(isDone ? T.green : T.border, 0.3);
+        ctx.lineWidth = 1;
+        ctx.setLineDash([]);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Node
+      const nodeR = 4 * s;
+      ctx.beginPath();
+      ctx.arc(nx, ny, nodeR, 0, Math.PI * 2);
+      if (isDone) {
+        ctx.fillStyle = url.status === 200 ? T.green : url.status === 301 ? T.amber : T.red;
+      } else if (isActive) {
+        ctx.fillStyle = T.cyan;
+        if (!mobile) {
+          shadow(T.cyanGlow, 8 * s);
+        }
+      } else {
+        ctx.fillStyle = T.borderLight;
+      }
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // URL label
+      if (!mobile || isActive) {
+        ctx.font = `400 ${Math.max(5, 6 * s)}px 'IBM Plex Mono', monospace`;
+        ctx.fillStyle = isActive ? T.text : T.textMut;
+        ctx.textAlign = angle > Math.PI / 2 || angle < -Math.PI / 2 ? 'right' : 'left';
+        const labelX = nx + Math.cos(angle) * 10 * s;
+        const labelY = ny + Math.sin(angle) * 10 * s;
+        const domain = url.url.split('/')[0];
+        ctx.fillText(domain, labelX, labelY);
+      }
+    }
+  }
+
+  /* ═══════════════════════════════════════════
+     MAIN DRAW LOOP
+     ═══════════════════════════════════════════ */
+  function draw(ts) {
+    if (!draw.start) draw.start = ts;
+    const t = (ts - draw.start) / 1000;
+    const s = S(W);
+    ctx.clearRect(0, 0, W, H);
+
+    // Grid
+    ctx.strokeStyle = T.border; ctx.lineWidth = 0.5;
+    ctx.globalAlpha = mobile ? 0.15 : 0.25;
+    const gsp = 40 * s;
+    for (let y = 0; y <= H; y += gsp) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+    if (!mobile) {
+      for (let x = 0; x <= W; x += gsp) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // Current scenario
+    const scenIdx = Math.floor(t / cycleDur) % SCENARIOS.length;
+    const scen = SCENARIOS[scenIdx];
+    const cycleT = (t % cycleDur) / cycleDur;
+
+    // Phase calculations
+    const crawlActive = cycleT >= 0.05 && cycleT < 0.30;
+    const crawlProgress = crawlActive ? (cycleT - 0.05) / 0.25 : cycleT >= 0.30 ? 1 : 0;
+    const parseActive = cycleT >= 0.35 && cycleT < 0.60;
+    const parseProgress = parseActive ? (cycleT - 0.35) / 0.25 : cycleT >= 0.60 ? 1 : 0;
+    const storeActive = cycleT >= 0.65 && cycleT < 0.82;
+    const storeProgress = storeActive ? (cycleT - 0.65) / 0.17 : cycleT >= 0.82 ? 1 : 0;
+
+    const padX = 20 * s;
+    const padY = 34 * s;
+
+    // ── Phase indicator bar (top) ──
+    const phaseBarY = padY;
+    const phaseBarH = 4 * s;
+    const phaseBarW = W - padX * 2;
+    ctx.fillStyle = T.surface;
+    ctx.beginPath(); ctx.roundRect(padX, phaseBarY, phaseBarW, phaseBarH, 2); ctx.fill();
+
+    // Phase segments
+    const phases = [
+      { start: 0.05, end: 0.30, color: T.cyan, label: 'CRAWL' },
+      { start: 0.35, end: 0.60, color: T.blue, label: 'PARSE' },
+      { start: 0.65, end: 0.82, color: T.green, label: 'STORE' },
+    ];
+    for (const phase of phases) {
+      const px = padX + phase.start * phaseBarW;
+      const pw = (phase.end - phase.start) * phaseBarW;
+      const fill = Math.max(0, Math.min(1, (cycleT - phase.start) / (phase.end - phase.start)));
+      ctx.fillStyle = colorAlpha(phase.color, 0.15);
+      ctx.fillRect(px, phaseBarY, pw, phaseBarH);
+      if (fill > 0) {
+        ctx.fillStyle = phase.color;
+        ctx.fillRect(px, phaseBarY, pw * fill, phaseBarH);
+      }
+    }
+
+    // Phase labels
+    const labelY = phaseBarY + phaseBarH + 12 * s;
+    const labelFs = Math.max(7, 8 * s);
+    ctx.font = `600 ${labelFs}px 'IBM Plex Mono', monospace`;
+    for (const phase of phases) {
+      const px = padX + (phase.start + phase.end) / 2 * phaseBarW;
+      const isActive = cycleT >= phase.start && cycleT < phase.end;
+      ctx.fillStyle = isActive ? phase.color : T.textMut;
+      ctx.textAlign = 'center';
+      ctx.fillText(phase.label, px, labelY);
+    }
+
+    // ── Layout: three columns / zones ──
+    const contentY = labelY + 18 * s;
+    const contentH = H - contentY - 20 * s;
+
+    if (mobile) {
+      // Mobile: stacked layout
+      const zoneH = contentH / 3;
+
+      // Crawl zone (top)
+      if (crawlProgress > 0) {
+        const urlsY = contentY;
+        const urlW = W - padX * 2;
+        for (let i = 0; i < scen.urls.length; i++) {
+          const fetched = i < Math.floor(crawlProgress * scen.urls.length);
+          const active = i === Math.floor(crawlProgress * scen.urls.length) && crawlActive;
+          const uy = urlsY + i * (24 * s + 3 * s);
+          drawUrlRow(padX, uy, urlW, scen.urls[i].url, scen.urls[i].status, scen.urls[i].size, active, fetched, t, s);
+        }
+      }
+
+      // Parse zone (middle)
+      if (parseProgress > 0) {
+        const parseY = contentY + zoneH + 5 * s;
+        const elW = W - padX * 2;
+        const visEls = Math.floor(parseProgress * scen.extracted.length);
+        for (let i = 0; i < visEls; i++) {
+          const elProgress = Math.min(1, (parseProgress * scen.extracted.length - i));
+          const ey = parseY + i * (22 * s + 3 * s);
+          drawExtractedElement(padX, ey, elW, scen.extracted[i], elProgress, t, s);
+        }
+      }
+
+      // Store zone (bottom)
+      if (storeProgress > 0) {
+        drawDataStore(W / 2, contentY + zoneH * 2.5, W * 0.5, zoneH * 0.6, storeProgress, scen.stats, t, s);
+      }
+    } else {
+      // Desktop: side by side
+
+      // Left column: Crawl graph + URL list
+      const leftW = W * 0.35;
+      const graphRadius = Math.min(leftW / 2 - 10 * s, contentH * 0.3);
+      const graphCX = padX + leftW / 2;
+      const graphCY = contentY + graphRadius + 10 * s;
+
+      if (crawlProgress > 0) {
+        drawCrawlGraph(graphCX, graphCY, graphRadius, scen.urls, crawlProgress, t, s);
+      }
+
+      // URL list below graph
+      const urlListY = graphCY + graphRadius + 20 * s;
+      const urlW = leftW - 5 * s;
+      for (let i = 0; i < scen.urls.length; i++) {
+        const fetched = i < Math.floor(crawlProgress * scen.urls.length);
+        const active = i === Math.floor(crawlProgress * scen.urls.length) && crawlActive;
+        if (!fetched && !active) continue;
+        const uy = urlListY + i * (28 * s + 3 * s);
+        if (uy + 28 * s > H - 20 * s) break;
+        drawUrlRow(padX, uy, urlW, scen.urls[i].url, scen.urls[i].status, scen.urls[i].size, active, fetched, t, s);
+      }
+
+      // Middle column: Extracted data
+      const midX = padX + leftW + 15 * s;
+      const midW = W * 0.35 - 15 * s;
+
+      if (parseProgress > 0) {
+        ctx.font = `600 ${Math.max(7, 8 * s)}px 'IBM Plex Mono', monospace`;
+        ctx.fillStyle = T.blue;
+        ctx.textAlign = 'left';
+        ctx.fillText('EXTRACTED DATA', midX, contentY + 8 * s);
+
+        const visEls = Math.floor(parseProgress * scen.extracted.length);
+        for (let i = 0; i < visEls; i++) {
+          const elProgress = Math.min(1, (parseProgress * scen.extracted.length - i));
+          const ey = contentY + 20 * s + i * (28 * s + 4 * s);
+          drawExtractedElement(midX, ey, midW, scen.extracted[i], elProgress, t, s);
+        }
+      }
+
+      // Spawn particles from extracted elements to data store
+      if (storeActive && t - lastSpawnT > 0.12) {
+        lastSpawnT = t;
+        const fromX = midX + midW;
+        const fromY = contentY + contentH * 0.4;
+        const toX = padX + leftW + midW + 40 * s + (W * 0.3) / 2;
+        const toY = contentY + contentH * 0.5;
+        for (let p = 0; p < 3; p++) {
+          spawnParticle(
+            fromX, fromY + (Math.random() - 0.5) * 60 * s,
+            toX, toY + (Math.random() - 0.5) * 40 * s,
+            T.green
+          );
+        }
+      }
+      drawParticles(t, s);
+
+      // Right column: Data store
+      const rightX = padX + leftW + midW + 30 * s;
+      const rightW = W - rightX - padX;
+      const storeCX = rightX + rightW / 2;
+      const storeCY = contentY + contentH * 0.45;
+
+      if (storeProgress > 0 || cycleT >= 0.60) {
+        drawDataStore(storeCX, storeCY, rightW, contentH * 0.6, storeProgress, scen.stats, t, s);
+      }
+
+      // Connection arrows between columns
+      if (crawlProgress >= 1 && parseProgress > 0) {
+        const arrowY = contentY + contentH * 0.4;
+        ctx.beginPath();
+        ctx.moveTo(padX + leftW + 2 * s, arrowY);
+        ctx.lineTo(midX - 6 * s, arrowY);
+        ctx.strokeStyle = colorAlpha(T.blue, 0.3);
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4 * s, 4 * s]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // Arrowhead
+        ctx.fillStyle = T.blue;
+        ctx.beginPath();
+        ctx.moveTo(midX - 6 * s, arrowY - 3 * s);
+        ctx.lineTo(midX, arrowY);
+        ctx.lineTo(midX - 6 * s, arrowY + 3 * s);
+        ctx.fill();
+      }
+    }
+
+    // ── Fade out ──
+    if (cycleT > 0.88) {
+      const fadeOut = (cycleT - 0.88) / 0.12;
+      ctx.fillStyle = colorAlpha(T.void, fadeOut);
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // ── Status top-left ──
+    ctx.font = `500 ${Math.max(8, 10 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.fillStyle = T.textMut; ctx.textAlign = 'left';
+    ctx.fillText('WEB SCRAPING', 28 * s, 18 * s);
+    const dotOn = cycleT >= 0.05 && cycleT < 0.88;
+    ctx.beginPath(); ctx.arc(14 * s, 15 * s, Math.max(3, 4 * s), 0, Math.PI * 2);
+    ctx.fillStyle = dotOn ? T.green : T.textMut; ctx.fill();
+
+    // ── Phase indicator top-right ──
+    ctx.font = `400 ${Math.max(7, 8 * s)}px 'IBM Plex Mono', monospace`;
+    ctx.textAlign = 'right';
+    let phaseLabel, phaseColor;
+    if (cycleT < 0.05) { phaseLabel = 'IDLE'; phaseColor = T.textMut; }
+    else if (cycleT < 0.30) { phaseLabel = 'CRAWLING'; phaseColor = T.cyan; }
+    else if (cycleT < 0.35) { phaseLabel = 'PARSING...'; phaseColor = T.blue; }
+    else if (cycleT < 0.60) { phaseLabel = 'EXTRACTING'; phaseColor = T.blue; }
+    else if (cycleT < 0.65) { phaseLabel = 'STORING...'; phaseColor = T.green; }
+    else if (cycleT < 0.82) { phaseLabel = 'STORING'; phaseColor = T.green; }
+    else if (cycleT < 0.88) { phaseLabel = 'COMPLETE'; phaseColor = T.green; }
+    else { phaseLabel = 'COMPLETE'; phaseColor = T.green; }
+    ctx.fillStyle = phaseColor;
+    ctx.fillText(phaseLabel, W - 10 * s, 18 * s);
+
+    // ── Stats bottom-left ──
+    if (cycleT >= 0.30) {
+      const statFs = Math.max(7, 8 * s);
+      ctx.font = `400 ${statFs}px 'IBM Plex Mono', monospace`;
+      ctx.fillStyle = T.textMut;
+      ctx.textAlign = 'left';
+      const fetchedCount = Math.min(scen.urls.length, Math.floor(crawlProgress * scen.urls.length));
+      const successCount = scen.urls.slice(0, fetchedCount).filter(u => u.status === 200).length;
+      ctx.fillText(`${fetchedCount} fetched  ·  ${successCount} ok`, padX, H - 10 * s);
+    }
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
