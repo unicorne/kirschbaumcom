@@ -1,0 +1,2202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cornelius Wiehl — AI & Machine Learning Engineer</title>
+<meta name="description" content="Senior Data Scientist & ML Engineer specializing in AI Agents, NLP, Neural Networks, Anomaly Detection, and more.">
+<style>
+/* ══════════════════════════════════════
+   DESIGN TOKENS
+   ══════════════════════════════════════ */
+:root {
+  --void:         #06080e;
+  --bg:           #0a0f1a;
+  --bg-alt:       #0d1321;
+  --surface:      #111827;
+  --surface-hover: #1a2332;
+  --border:       #1e2a3a;
+  --border-light: #2a3a4e;
+
+  --accent:       #6ea8fe;
+  --accent-glow:  rgba(110,168,254,0.25);
+  --accent-dim:   rgba(110,168,254,0.06);
+  --secondary:    #40d4c0;
+  --secondary-glow: rgba(64,212,192,0.2);
+  --tertiary:     #c4a0ff;
+  --tertiary-glow: rgba(196,160,255,0.2);
+  --success:      #4ade80;
+  --warning:      #f0b429;
+  --danger:       #f87171;
+
+  --text:         #e8edf5;
+  --text-sec:     #8b96a9;
+  --text-muted:   #4a5568;
+
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:    'IBM Plex Mono', 'Fira Code', monospace;
+  --font-body:    'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --section-pad: clamp(60px, 10vw, 120px);
+  --container:   1140px;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ══════════════════════════════════════
+   RESET & BASE
+   ══════════════════════════════════════ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+::selection { background: var(--accent); color: var(--void); }
+
+a { color: var(--accent); text-decoration: none; transition: color 0.2s; }
+a:hover { color: var(--secondary); }
+
+.container {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 clamp(20px, 4vw, 40px);
+}
+
+/* ══════════════════════════════════════
+   NAVIGATION
+   ══════════════════════════════════════ */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  background: rgba(6, 8, 14, 0.8);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--border);
+  transition: all 0.3s var(--ease);
+}
+
+.nav.scrolled {
+  background: rgba(10, 15, 26, 0.95);
+  box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+}
+
+.nav-inner {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 clamp(20px, 4vw, 40px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-logo img {
+  height: 36px;
+  width: auto;
+  border-radius: 6px;
+  transition: opacity 0.3s;
+}
+
+.nav-logo img:hover { opacity: 1; }
+
+.nav-logo-text {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+
+.nav-links {
+  display: flex;
+  gap: 32px;
+  list-style: none;
+}
+
+.nav-links a {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-sec);
+  position: relative;
+  padding: 4px 0;
+  transition: color 0.3s;
+}
+
+.nav-links a:hover,
+.nav-links a.active { color: var(--accent); }
+
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; left: 0;
+  width: 0; height: 1px;
+  background: var(--accent);
+  transition: width 0.3s var(--ease);
+}
+
+.nav-links a:hover::after,
+.nav-links a.active::after { width: 100%; }
+
+.nav-toggle {
+  display: none;
+  background: none; border: none;
+  color: var(--text-sec); cursor: pointer; padding: 8px;
+}
+.nav-toggle svg { display: block; }
+
+/* ══════════════════════════════════════
+   COLOR CHANGER
+   ══════════════════════════════════════ */
+.color-changer {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  z-index: 999;
+}
+
+.color-changer-toggle {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-sec);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.3s var(--ease);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.color-changer-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: rotate(30deg);
+}
+
+.color-panel {
+  position: absolute;
+  bottom: 60px; right: 0;
+  width: 280px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px) scale(0.95);
+  transition: all 0.3s var(--ease);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.color-panel.open {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0) scale(1);
+}
+
+.color-panel h4 {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  text-transform: uppercase;
+}
+
+.preset-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.preset-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-sec);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preset-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+  border-color: var(--border-light);
+}
+
+.preset-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.preset-btn .swatch {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.color-custom {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+
+.color-custom label {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: 0.1em; color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.color-custom input[type="color"] {
+  -webkit-appearance: none; appearance: none;
+  border: 1px solid var(--border);
+  width: 24px; height: 24px;
+  border-radius: 4px; cursor: pointer;
+  background: none; padding: 0;
+}
+.color-custom input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.color-custom input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
+
+/* ══════════════════════════════════════
+   SECTION COMMON
+   ══════════════════════════════════════ */
+.section {
+  padding: var(--section-pad) 0;
+  position: relative;
+}
+
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-label::before {
+  content: '';
+  width: 24px; height: 1px;
+  background: var(--accent);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text);
+  margin-bottom: 20px;
+  letter-spacing: -0.02em;
+}
+
+.section-subtitle {
+  font-size: clamp(15px, 2vw, 18px);
+  color: var(--text-sec);
+  max-width: 600px;
+  line-height: 1.7;
+}
+
+/* ══════════════════════════════════════
+   HERO
+   ══════════════════════════════════════ */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  padding-top: 64px;
+}
+
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(110,168,254,0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(64,212,192,0.04), transparent),
+    radial-gradient(ellipse 50% 50% at 20% 80%, rgba(196,160,255,0.04), transparent);
+  pointer-events: none;
+}
+
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.15;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black, transparent);
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black, transparent);
+  pointer-events: none;
+}
+
+.hero-content { position: relative; z-index: 1; }
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(110,168,254,0.15);
+  border-radius: 100px;
+  padding: 6px 16px 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin-bottom: 32px;
+}
+
+.hero-badge .status-dot {
+  width: 6px; height: 6px;
+  background: var(--success);
+  border-radius: 50%;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.8); }
+}
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(40px, 7vw, 80px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin-bottom: 24px;
+}
+
+.hero h1 .gradient-text {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--secondary) 50%, var(--tertiary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-description {
+  font-size: clamp(16px, 2vw, 20px);
+  color: var(--text-sec);
+  max-width: 540px;
+  line-height: 1.7;
+  margin-bottom: 40px;
+}
+
+.hero-stats {
+  display: flex;
+  gap: clamp(24px, 4vw, 48px);
+  margin-bottom: 40px;
+}
+
+.hero-stat { display: flex; flex-direction: column; }
+
+.hero-stat .number {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.hero-stat .label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.hero-cta { display: flex; gap: 16px; flex-wrap: wrap; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s var(--ease);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--void);
+}
+
+.btn-primary:hover {
+  color: var(--void);
+  box-shadow: 0 8px 30px var(--accent-glow);
+  transform: translateY(-2px);
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border-light);
+  color: var(--text-sec);
+}
+
+.btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-2px);
+}
+
+/* ══════════════════════════════════════
+   SERVICES — Topic + Expand-right layout
+   ══════════════════════════════════════ */
+.topic-group {
+  margin-bottom: 48px;
+}
+
+.topic-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.topic-icon {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.topic-icon svg { width: 22px; height: 22px; }
+
+.topic-info h3 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.topic-info p {
+  font-size: 14px;
+  color: var(--text-sec);
+  line-height: 1.6;
+  max-width: 600px;
+}
+
+.topic-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.topic-tag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+/* Animation boxes — vertical stack, expand right */
+.anim-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.anim-row {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  gap: 0;
+  min-height: 56px;
+  transition: all 0.4s var(--ease);
+}
+
+.anim-trigger {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 20px;
+  cursor: pointer;
+  transition: all 0.3s var(--ease);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 2;
+  position: relative;
+}
+
+.anim-trigger:hover {
+  border-color: var(--border-light);
+  background: var(--surface);
+}
+
+.anim-row.active .anim-trigger {
+  border-color: var(--accent);
+  background: var(--surface);
+  border-radius: 10px 0 0 10px;
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.anim-trigger-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.anim-trigger-text h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.anim-trigger-text span {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.anim-trigger .arrow {
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted);
+  transition: all 0.3s var(--ease);
+  flex-shrink: 0;
+}
+
+.anim-trigger:hover .arrow { color: var(--accent); }
+
+.anim-row.active .anim-trigger .arrow {
+  color: var(--accent);
+  transform: rotate(180deg);
+}
+
+/* The expanding animation panel */
+.anim-panel {
+  overflow: hidden;
+  width: 0;
+  opacity: 0;
+  border: 1px solid transparent;
+  border-left: none;
+  border-radius: 0 10px 10px 0;
+  background: var(--bg-alt);
+  will-change: width, opacity;
+  transition: width 0.55s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s ease;
+}
+
+.anim-row.active .anim-panel {
+  width: clamp(400px, calc(100% - 420px), 860px);
+  opacity: 1;
+  border-color: var(--accent);
+}
+
+/* Collapsing: delay opacity so content fades first, then width shrinks */
+.anim-row:not(.active) .anim-panel {
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 1, 1),
+              width 0.45s cubic-bezier(0.4, 0, 0.2, 1) 0.1s,
+              border-color 0.2s ease;
+}
+
+.anim-panel iframe {
+  width: 100%;
+  min-width: 500px;
+  height: 420px;
+  border: none;
+  display: block;
+  border-radius: 0 9px 9px 0;
+}
+
+/* ══════════════════════════════════════
+   PROJECTS & EXPERIENCE
+   ══════════════════════════════════════ */
+.timeline {
+  position: relative;
+  margin-top: 48px;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 20px;
+  top: 0; bottom: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, var(--accent), var(--border), transparent);
+}
+
+.timeline-section { margin-bottom: 48px; }
+
+.timeline-section-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-left: 52px;
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.timeline-section-title::before {
+  content: '';
+  position: absolute;
+  left: 14px; top: 50%;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 2px solid var(--accent);
+  transform: translateY(-50%);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.timeline-item {
+  position: relative;
+  padding-left: 52px;
+  margin-bottom: 16px;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 17px; top: 10px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--border-light);
+  transition: all 0.3s;
+}
+
+.timeline-item:hover::before {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.timeline-card {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  transition: all 0.3s var(--ease);
+}
+
+.timeline-card:hover {
+  border-color: var(--border-light);
+  background: var(--surface);
+}
+
+.timeline-card .date {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.timeline-card h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.timeline-card .company {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.timeline-card p {
+  font-size: 13px;
+  color: var(--text-sec);
+  line-height: 1.6;
+}
+
+.timeline-card .tech-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.timeline-card .tech-tag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+
+/* ══════════════════════════════════════
+   ABOUT
+   ══════════════════════════════════════ */
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-top: 48px;
+}
+
+.about-card {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px;
+}
+
+.about-card h3 {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.award-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.award-item:last-child { border-bottom: none; }
+
+.award-icon {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.award-content h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.award-content p {
+  font-size: 12px;
+  color: var(--text-sec);
+}
+
+.award-content .year {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+}
+
+.education-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.edu-badge {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  transition: all 0.3s var(--ease);
+}
+
+.edu-badge:hover {
+  border-color: var(--border-light);
+  transform: translateY(-2px);
+}
+
+.edu-badge .degree {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+
+.edu-badge .field { font-size: 12px; color: var(--text-sec); margin: 4px 0; }
+
+.edu-badge .grade {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.edu-badge .school {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.skills-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.skill-pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 6px 14px;
+  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-sec);
+  transition: all 0.2s;
+}
+
+.skill-pill:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* ══════════════════════════════════════
+   CONTACT
+   ══════════════════════════════════════ */
+.contact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 48px;
+}
+
+.contact-card {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.3s var(--ease);
+}
+
+.contact-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+}
+
+.contact-icon {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  background: var(--accent-dim);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.contact-icon svg { width: 20px; height: 20px; color: var(--accent); }
+
+.contact-info .contact-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.contact-info .contact-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* ══════════════════════════════════════
+   FOOTER
+   ══════════════════════════════════════ */
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 0;
+  text-align: center;
+}
+
+.footer-logos {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 20px;
+  opacity: 0.4;
+  filter: grayscale(1);
+  transition: all 0.3s;
+}
+
+.footer-logos:hover { opacity: 0.7; filter: grayscale(0); }
+
+.footer-logos img { height: 40px; width: auto; }
+
+.footer p {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+
+/* ══════════════════════════════════════
+   DIVIDER
+   ══════════════════════════════════════ */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-light), transparent);
+  margin: 0 auto;
+  max-width: 600px;
+}
+
+/* ══════════════════════════════════════
+   SCROLL REVEAL
+   ══════════════════════════════════════ */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s var(--ease), transform 0.5s var(--ease);
+}
+
+.reveal-stagger.visible > *:nth-child(1) { transition-delay: 0s; }
+.reveal-stagger.visible > *:nth-child(2) { transition-delay: 0.08s; }
+.reveal-stagger.visible > *:nth-child(3) { transition-delay: 0.16s; }
+.reveal-stagger.visible > *:nth-child(4) { transition-delay: 0.24s; }
+.reveal-stagger.visible > *:nth-child(5) { transition-delay: 0.32s; }
+.reveal-stagger.visible > *:nth-child(6) { transition-delay: 0.4s; }
+.reveal-stagger.visible > *:nth-child(7) { transition-delay: 0.48s; }
+
+.reveal-stagger.visible > * {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ══════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════ */
+@media (max-width: 900px) {
+  .anim-row {
+    grid-template-columns: 1fr;
+  }
+
+  .anim-row.active .anim-trigger {
+    border-radius: 10px 10px 0 0;
+  }
+
+  .anim-panel {
+    width: auto !important;
+    height: 0;
+    transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.3s ease;
+    border-radius: 0 0 10px 10px;
+    border-left: 1px solid transparent;
+    border-top: none;
+  }
+
+  .anim-row:not(.active) .anim-panel {
+    transition: opacity 0.2s cubic-bezier(0.4, 0, 1, 1),
+                height 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.1s,
+                border-color 0.2s ease;
+  }
+
+  .anim-row.active .anim-panel {
+    height: 420px;
+    opacity: 1;
+    border-color: var(--accent);
+  }
+
+  .anim-panel iframe {
+    min-width: 0;
+    width: 100%;
+    border-radius: 0 0 9px 9px;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  .nav-links.open {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 64px; left: 0; right: 0;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 20px;
+    gap: 16px;
+  }
+  .nav-toggle { display: block; }
+
+  .hero h1 { font-size: clamp(32px, 9vw, 56px); }
+
+  .about-grid { grid-template-columns: 1fr; }
+  .education-grid { grid-template-columns: 1fr; }
+  .hero-stats { flex-wrap: wrap; }
+
+  .anim-trigger { padding: 12px 16px; }
+}
+
+@media (max-width: 480px) {
+  .hero-cta { flex-direction: column; }
+  .btn { justify-content: center; }
+  .timeline::before { left: 12px; }
+  .timeline-section-title { padding-left: 40px; }
+  .timeline-section-title::before { left: 6px; }
+  .timeline-item { padding-left: 40px; }
+  .timeline-item::before { left: 9px; }
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ══════════════ NAVIGATION ══════════════ -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <div class="nav-logo">
+      <img src="logos/logo4.svg" alt="KirschbaumAI">
+      <span class="nav-logo-text">KIRSCHBAUM AI</span>
+    </div>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#services">Services</a></li>
+      <li><a href="#projects">Projects</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ══════════════ HERO ══════════════ -->
+<section class="hero" id="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="container hero-content">
+    <div class="hero-badge">
+      <span class="status-dot"></span>
+      Available for projects
+    </div>
+    <h1>
+      Building intelligent<br>
+      <span class="gradient-text">AI solutions</span>
+    </h1>
+    <p class="hero-description">
+      Senior Data Scientist & ML Engineer with 5+ years of experience delivering production-grade AI systems — from anomaly detection and NLP pipelines to autonomous agents and computer vision.
+    </p>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <span class="number">5+</span>
+        <span class="label">Years Experience</span>
+      </div>
+      <div class="hero-stat">
+        <span class="number">12+</span>
+        <span class="label">ML Projects</span>
+      </div>
+      <div class="hero-stat">
+        <span class="number">1</span>
+        <span class="label">US Patent</span>
+      </div>
+    </div>
+    <div class="hero-cta">
+      <a href="#contact" class="btn btn-primary">Get in touch</a>
+      <a href="#services" class="btn btn-ghost">Explore services</a>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ══════════════ SERVICES ══════════════ -->
+<section class="section" id="services">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">What I offer</div>
+      <h2 class="section-title">AI & ML Services</h2>
+      <p class="section-subtitle">
+        End-to-end machine learning solutions — from prototyping to production deployment.
+      </p>
+    </div>
+
+    <div style="margin-top: 48px;" class="reveal-stagger" id="topicsContainer">
+
+      <!-- ─── AI Agents ─── -->
+      <div class="topic-group">
+        <div class="topic-header">
+          <div class="topic-icon" style="background: rgba(110,168,254,0.1); color: var(--accent);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+          </div>
+          <div class="topic-info">
+            <h3>AI Agents</h3>
+            <p>Autonomous systems that reason, plan, and take action. From conversational chatbots to complex multi-step workflows with tool use, memory, and retrieval-augmented generation.</p>
+            <div class="topic-tags">
+              <span class="topic-tag">LangChain</span>
+              <span class="topic-tag">Tool Use</span>
+              <span class="topic-tag">RAG</span>
+              <span class="topic-tag">Voice</span>
+            </div>
+          </div>
+        </div>
+        <div class="anim-list">
+          <div class="anim-row" data-anim="agents/03-conversation-flow.html">
+            <div class="anim-trigger">
+              <div class="anim-trigger-text">
+                <h4>Conversation Flow</h4>
+                <span>Multi-turn dialogue orchestration</span>
+              </div>
+              <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></div>
+            </div>
+            <div class="anim-panel"></div>
+          </div>
+          <div class="anim-row" data-anim="agents/04-agent-tool-use.html">
+            <div class="anim-trigger">
+              <div class="anim-trigger-text">
+                <h4>Agent Tool Use</h4>
+                <span>Autonomous tool selection & execution</span>
+              </div>
+              <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></div>
+            </div>
+            <div class="anim-panel"></div>
+          </div>
+          <div class="anim-row" data-anim="agents/04-voice-agent.html">
+            <div class="anim-trigger">
+              <div class="anim-trigger-text">
+                <h4>Voice Agent</h4>
+                <span>Speech-driven AI assistant pipeline</span>
+              </div>
+              <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></div>
+            </div>
+            <div class="anim-panel"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── NLP ─── -->
+      <div class="topic-group">
+        <div class="topic-header">
+          <div class="topic-icon" style="background: rgba(64,212,192,0.1); color: var(--secondary);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          </div>
+          <div class="topic-info">
+            <h3>Natural Language Processing</h3>
+            <p>Text understanding, generation, and transformation at scale. Sentiment analysis, document processing, custom LLM fine-tuning, and end-to-end speech-to-text pipelines.</p>
+            <div class="topic-tags">
+              <span class="topic-tag">LLMs</span>
+              <span class="topic-tag">OCR</span>
+              <span class="topic-tag">Transformers</span>
+              <span class="topic-tag">Audio</span>
+            </div>
+          </div>
+        </div>
+        <div class="anim-list">
+          <div class="anim-row" data-anim="NLP/01-sarcastic.html">
+            <div class="anim-trigger">
+              <div class="anim-trigger-text">
+                <h4>Sarcastic Rewrite</h4>
+                <span>Tone transformation & style transfer</span>
+              </div>
+              <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></div>
+            </div>
+            <div class="anim-panel"></div>
+          </div>
+          <div class="anim-row" data-anim="NLP/02-token-generation.html">
+            <div class="anim-trigger">
+              <div class="anim-trigger-text">
+                <h4>Token Generation</h4>
+                <span>Autoregressive text generation</span>
+              </div>
+              <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></div>
+            </div>
+            <div class="anim-panel"></div>
+          </div>
+          <div class="anim-row" data-anim="NLP/03-audio-pipeline.html">
+            <div class="anim-trigger">
+              <div class="anim-trigger-text">
+                <h4>Audio Pipeline</h4>
+                <span>Speech recognition & transcription</span>
+              </div>
+              <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></div>
+            </div>
+            <div class="anim-panel"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Neural Networks ─── -->
+      <div class="topic-group">
+        <div class="topic-header">
+          <div class="topic-icon" style="background: rgba(196,160,255,0.1); color: var(--tertiary);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><circle cx="12" cy="12" r="2"/><line x1="7.8" y1="7" x2="10.5" y2="10.5"/><line x1="16.2" y1="7" x2="13.5" y2="10.5"/><line x1="7.8" y1="17" x2="10.5" y2="13.5"/><line x1="16.2" y1="17" x2="13.5" y2="13.5"/></svg>
+          </div>
+          <div class="topic-info">
+            <h3>Neural Networks</h3>
+            <p>Deep learning architectures for vision, segmentation, and classification. CNNs, autoencoders, and custom architectures — trained, optimized, and deployed for production.</p>
+            <div class="topic-tags">
+              <span class="topic-tag">PyTorch</span>
+              <span class="topic-tag">Computer Vision</span>
+              <span class="topic-tag">CNNs</span>
+              <span class="topic-tag">Segmentation</span>
+            </div>
+          </div>
+        </div>
+        <div class="anim-list">
+          <div class="anim-row" data-anim="neuralnets/02-backpropagation.html">
+            <div class="anim-trigger">
+              <div class="anim-trigger-text">
+                <h4>Backpropagation</h4>
+                <span>Gradient flow & weight optimization</span>
+              </div>
+              <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></div>
+            </div>
+            <div class="anim-panel"></div>
+          </div>
+          <div class="anim-row" data-anim="neuralnets/03-convolutional.html">
+            <div class="anim-trigger">
+              <div class="anim-trigger-text">
+                <h4>Convolutional Network</h4>
+                <span>Feature extraction & spatial processing</span>
+              </div>
+              <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></div>
+            </div>
+            <div class="anim-panel"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Anomaly Detection ─── -->
+      <div class="topic-group">
+        <div class="topic-header">
+          <div class="topic-icon" style="background: rgba(248,113,113,0.1); color: var(--danger);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="topic-info">
+            <h3>Anomaly Detection</h3>
+            <p>Real-time monitoring and fault detection for industrial systems. Autoencoder-based methods on high-frequency sensor data, with edge deployment down to microcontrollers.</p>
+            <div class="topic-tags">
+              <span class="topic-tag">Autoencoders</span>
+              <span class="topic-tag">Sensors</span>
+              <span class="topic-tag">Real-time</span>
+              <span class="topic-tag">Edge AI</span>
+            </div>
+          </div>
+        </div>
+        <div class="anim-list">
+          <div class="anim-row" data-anim="anomaly/01-sensor-stream.html">
+            <div class="anim-trigger">
+              <div class="anim-trigger-text">
+                <h4>Sensor Stream</h4>
+                <span>Live signal monitoring & threshold detection</span>
+              </div>
+              <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></div>
+            </div>
+            <div class="anim-panel"></div>
+          </div>
+          <div class="anim-row" data-anim="anomaly/02-data-pipeline.html">
+            <div class="anim-trigger">
+              <div class="anim-trigger-text">
+                <h4>Data Pipeline</h4>
+                <span>Ingestion, processing & alerting flow</span>
+              </div>
+              <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></div>
+            </div>
+            <div class="anim-panel"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Optimization ─── -->
+      <div class="topic-group">
+        <div class="topic-header">
+          <div class="topic-icon" style="background: rgba(240,180,41,0.1); color: var(--warning);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div class="topic-info">
+            <h3>Optimization</h3>
+            <p>Data-driven optimization for marketing campaigns, logistics, and recommender systems. Clustering, mathematical programming, and algorithmic decision support.</p>
+            <div class="topic-tags">
+              <span class="topic-tag">Clustering</span>
+              <span class="topic-tag">Recommenders</span>
+              <span class="topic-tag">Campaigns</span>
+              <span class="topic-tag">Operations</span>
+            </div>
+          </div>
+        </div>
+        <div class="anim-list">
+          <div class="anim-row" data-anim="optimization/01-campaign-customer.html">
+            <div class="anim-trigger">
+              <div class="anim-trigger-text">
+                <h4>Campaign & Customer</h4>
+                <span>Targeting, segmentation & A/B optimization</span>
+              </div>
+              <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></div>
+            </div>
+            <div class="anim-panel"></div>
+          </div>
+          <div class="anim-row" data-anim="optimization/04-recommender-system.html">
+            <div class="anim-trigger">
+              <div class="anim-trigger-text">
+                <h4>Recommender System</h4>
+                <span>Collaborative & content-based filtering</span>
+              </div>
+              <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></div>
+            </div>
+            <div class="anim-panel"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Time Series ─── -->
+      <div class="topic-group">
+        <div class="topic-header">
+          <div class="topic-icon" style="background: rgba(74,222,128,0.1); color: var(--success);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          </div>
+          <div class="topic-info">
+            <h3>Time Series Forecasting</h3>
+            <p>Multi-horizon forecasting for sales, demand, and operational metrics. Deep learning and statistical models for accurate, actionable predictions with confidence intervals.</p>
+            <div class="topic-tags">
+              <span class="topic-tag">Forecasting</span>
+              <span class="topic-tag">Deep Learning</span>
+              <span class="topic-tag">Multivariate</span>
+            </div>
+          </div>
+        </div>
+        <div class="anim-list">
+          <div class="anim-row" data-anim="timeseries/02-multi-horizon.html">
+            <div class="anim-trigger">
+              <div class="anim-trigger-text">
+                <h4>Multi-Horizon Forecast</h4>
+                <span>Short & long-term prediction with uncertainty</span>
+              </div>
+              <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></div>
+            </div>
+            <div class="anim-panel"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Knowledge Retrieval ─── -->
+      <div class="topic-group">
+        <div class="topic-header">
+          <div class="topic-icon" style="background: rgba(110,168,254,0.1); color: var(--accent);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          </div>
+          <div class="topic-info">
+            <h3>Knowledge Retrieval</h3>
+            <p>RAG pipelines, vector databases, and intelligent document search. Connect LLMs to your proprietary data for grounded, accurate, and citation-backed responses.</p>
+            <div class="topic-tags">
+              <span class="topic-tag">RAG</span>
+              <span class="topic-tag">Vector DB</span>
+              <span class="topic-tag">LangChain</span>
+              <span class="topic-tag">Web Scraping</span>
+            </div>
+          </div>
+        </div>
+        <div class="anim-list">
+          <div class="anim-row" data-anim="knowledge/01-rag-pipeline.html">
+            <div class="anim-trigger">
+              <div class="anim-trigger-text">
+                <h4>RAG Pipeline</h4>
+                <span>Retrieval-augmented generation flow</span>
+              </div>
+              <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></div>
+            </div>
+            <div class="anim-panel"></div>
+          </div>
+          <div class="anim-row" data-anim="knowledge/02-web-scraping.html">
+            <div class="anim-trigger">
+              <div class="anim-trigger-text">
+                <h4>Web Scraping</h4>
+                <span>Automated data extraction & structuring</span>
+              </div>
+              <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 6 15 12 9 18"/></svg></div>
+            </div>
+            <div class="anim-panel"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ══════════════ PROJECTS & EXPERIENCE ══════════════ -->
+<section class="section" id="projects">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">Track Record</div>
+      <h2 class="section-title">Projects & Experience</h2>
+      <p class="section-subtitle">
+        A selection of production ML systems and professional experience across industries.
+      </p>
+    </div>
+
+    <div class="timeline reveal">
+
+      <div class="timeline-section">
+        <div class="timeline-section-title">Work Experience</div>
+
+        <div class="timeline-item">
+          <div class="timeline-card">
+            <div class="date">Nov 2022 — Aug 2025</div>
+            <h4>Senior Data Scientist</h4>
+            <div class="company">AI Associates / AltaSigma — Stuttgart & Ulm</div>
+            <p>Led multiple data science and ML projects across diverse clients. Specialized in anomaly detection, NLP, OCR, and LLM integration for enterprise solutions.</p>
+            <div class="tech-tags">
+              <span class="tech-tag">PyTorch</span>
+              <span class="tech-tag">LLMs</span>
+              <span class="tech-tag">OCR</span>
+              <span class="tech-tag">Anomaly Detection</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-card">
+            <div class="date">Aug 2021 — Nov 2022</div>
+            <h4>Data Scientist</h4>
+            <div class="company">AI Associates / AltaSigma — Stuttgart & Ulm</div>
+            <p>Developed numerous data science and ML projects focused on data engineering, pipeline architecture, and customer analytics.</p>
+            <div class="tech-tags">
+              <span class="tech-tag">Python</span>
+              <span class="tech-tag">SQL</span>
+              <span class="tech-tag">Data Engineering</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-card">
+            <div class="date">Feb 2021 — Aug 2021</div>
+            <h4>Big Data Software Developer</h4>
+            <div class="company">IBM — Boeblingen</div>
+            <p>Software development on IBM Data Gate — enterprise data integration and replication platform for hybrid cloud environments.</p>
+            <div class="tech-tags">
+              <span class="tech-tag">Java</span>
+              <span class="tech-tag">Big Data</span>
+              <span class="tech-tag">Cloud</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-card">
+            <div class="date">Apr 2020 — Dec 2020</div>
+            <h4>Machine Learning Intern & Watson Developer</h4>
+            <div class="company">IBM — Boeblingen</div>
+            <p>Researched ML techniques for Master Data Management. Developed a power ranking system for IBM Watson's partnership with the Overwatch League esports.</p>
+            <div class="tech-tags">
+              <span class="tech-tag">ML Research</span>
+              <span class="tech-tag">Watson</span>
+              <span class="tech-tag">Esports Analytics</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-card">
+            <div class="date">Oct 2019 — Mar 2020</div>
+            <h4>Working Student — Automotive R&D</h4>
+            <div class="company">Robert Bosch — Leonberg</div>
+            <p>Conducted research on radar sensing techniques for autonomous driving and advanced driver-assistance systems.</p>
+            <div class="tech-tags">
+              <span class="tech-tag">Radar</span>
+              <span class="tech-tag">Automotive</span>
+              <span class="tech-tag">R&D</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline-section">
+        <div class="timeline-section-title">Selected Projects</div>
+
+        <div class="timeline-item">
+          <div class="timeline-card">
+            <div class="date">Jun 2023 — Present</div>
+            <h4>Real-Time Anomaly Detection for Automotive Manufacturing</h4>
+            <p>Implemented autoencoder-based anomaly detection on high-frequency sensor data for quality assurance in automotive production lines.</p>
+            <div class="tech-tags">
+              <span class="tech-tag">Autoencoders</span>
+              <span class="tech-tag">Real-time</span>
+              <span class="tech-tag">Sensor Data</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-card">
+            <div class="date">Aug 2024 — Jan 2025</div>
+            <h4>Automated Vehicle Document OCR Pipelines</h4>
+            <p>Developed and optimized two OCR pipelines for automated extraction and validation of complex vehicle documents including security verification checks.</p>
+            <div class="tech-tags">
+              <span class="tech-tag">OCR</span>
+              <span class="tech-tag">Document AI</span>
+              <span class="tech-tag">Validation</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-card">
+            <div class="date">Jun 2024 — Nov 2024</div>
+            <h4>Structural Defect Detection in Wooden Pallets</h4>
+            <p>Built a custom dataset and trained a segmentation network to detect structural defects, enabling automated quality inspection on production lines.</p>
+            <div class="tech-tags">
+              <span class="tech-tag">Segmentation</span>
+              <span class="tech-tag">Computer Vision</span>
+              <span class="tech-tag">Custom Dataset</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-card">
+            <div class="date">Jun 2024 — Aug 2024</div>
+            <h4>RAG Workflows with Local LLMs</h4>
+            <p>Integrated retrieval-augmented generation workflows with local LLMs, vector databases, and LangChain for intelligent data linking and dynamic code execution.</p>
+            <div class="tech-tags">
+              <span class="tech-tag">RAG</span>
+              <span class="tech-tag">LangChain</span>
+              <span class="tech-tag">Vector DB</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-card">
+            <div class="date">Oct 2024 — Jan 2025</div>
+            <h4>Feature-Based Anomaly Detection for Industrial Presses</h4>
+            <p>Designed feature-based anomaly detection for industrial press systems and migrated a deep learning model from TensorFlow to PyTorch.</p>
+            <div class="tech-tags">
+              <span class="tech-tag">Anomaly Detection</span>
+              <span class="tech-tag">TF to PyTorch</span>
+              <span class="tech-tag">Industrial</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-card">
+            <div class="date">Mar 2024 — Jul 2024</div>
+            <h4>IR-Based Real-Time Industrial Monitoring</h4>
+            <p>Deployed real-time infrared-based monitoring of industrial process interfaces with AI-driven defect detection and cycle-based analysis.</p>
+            <div class="tech-tags">
+              <span class="tech-tag">Infrared</span>
+              <span class="tech-tag">Real-time</span>
+              <span class="tech-tag">Defect Detection</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-card">
+            <div class="date">Oct 2022 — Feb 2023</div>
+            <h4>Thermal Anomaly Detection for Microcontrollers</h4>
+            <p>Created a thermal anomaly detection model ported from Python to C for embedded deployment on microcontrollers with constrained resources.</p>
+            <div class="tech-tags">
+              <span class="tech-tag">Embedded ML</span>
+              <span class="tech-tag">C</span>
+              <span class="tech-tag">Edge AI</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-card">
+            <div class="date">Oct 2021 — Apr 2023</div>
+            <h4>Customer Behavior Analytics for National Railway</h4>
+            <p>Designed a scalable data pipeline with clustering and record linkage to analyze customer behavior. Integrated external data via APIs and databases.</p>
+            <div class="tech-tags">
+              <span class="tech-tag">Clustering</span>
+              <span class="tech-tag">Record Linkage</span>
+              <span class="tech-tag">Data Pipeline</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-card">
+            <div class="date">Mar 2022 — Apr 2022</div>
+            <h4>Deep Learning Sales Forecasting</h4>
+            <p>Built a deep learning model for sales forecasting, improving accuracy through multivariate time series analysis.</p>
+            <div class="tech-tags">
+              <span class="tech-tag">Forecasting</span>
+              <span class="tech-tag">Time Series</span>
+              <span class="tech-tag">Deep Learning</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-card">
+            <div class="date">Jul 2022 — Oct 2022</div>
+            <h4>AI-Based Marketing Campaign Optimization</h4>
+            <p>Developed AI-based optimization for marketing campaigns using clustering and mathematical optimization methods.</p>
+            <div class="tech-tags">
+              <span class="tech-tag">Optimization</span>
+              <span class="tech-tag">Marketing</span>
+              <span class="tech-tag">Clustering</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ══════════════ ABOUT ══════════════ -->
+<section class="section" id="about">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">About Me</div>
+      <h2 class="section-title">Awards, Education & Skills</h2>
+    </div>
+
+    <div class="about-grid reveal">
+
+      <div class="about-card">
+        <h3>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+          Awards & Patent
+        </h3>
+
+        <div class="award-item">
+          <div class="award-icon" style="background: rgba(240,180,41,0.1); color: var(--warning);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <div class="award-content">
+            <h4>1st Place — Imitation Learning Challenge</h4>
+            <p>Self-driving Cars Lecture Competition</p>
+            <span class="year">2024</span>
+          </div>
+        </div>
+
+        <div class="award-item">
+          <div class="award-icon" style="background: rgba(196,160,255,0.1); color: var(--tertiary);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <div class="award-content">
+            <h4>3rd Place — RL Hockey Competition</h4>
+            <p>Reinforcement Learning Course</p>
+            <span class="year">2023</span>
+          </div>
+        </div>
+
+        <div class="award-item">
+          <div class="award-icon" style="background: rgba(74,222,128,0.1); color: var(--success);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <div class="award-content">
+            <h4>DPG Abiturpreis in Physics</h4>
+            <p>German Physical Society</p>
+            <span class="year">2014</span>
+          </div>
+        </div>
+
+        <div class="award-item">
+          <div class="award-icon" style="background: rgba(110,168,254,0.1); color: var(--accent);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div class="award-content">
+            <h4>US Patent — Detecting Meta-Environment Changes</h4>
+            <p>US 12,138,554 B2</p>
+            <span class="year">2021</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="about-card">
+        <h3>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1 2 3 6 3s6-2 6-3v-5"/></svg>
+          Education
+        </h3>
+        <div class="education-grid">
+          <div class="edu-badge">
+            <div class="degree">M.Sc.</div>
+            <div class="field">Machine Learning</div>
+            <div class="grade">1.36</div>
+            <div class="school">Uni Tuebingen, 2022–2025</div>
+          </div>
+          <div class="edu-badge">
+            <div class="degree">B.Sc.</div>
+            <div class="field">Mathematics</div>
+            <div class="grade">1.4</div>
+            <div class="school">Uni Tuebingen, 2016–2020</div>
+          </div>
+          <div class="edu-badge">
+            <div class="degree">B.Sc.</div>
+            <div class="field">Cognitive Science</div>
+            <div class="grade">1.5</div>
+            <div class="school">Uni Tuebingen, 2015–2019</div>
+          </div>
+          <div class="edu-badge">
+            <div class="degree">Erasmus</div>
+            <div class="field">Exchange</div>
+            <div class="grade" style="font-size:14px;">Lisbon</div>
+            <div class="school">Nova de Lisboa, 2024–2025</div>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 28px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          Skills
+        </h3>
+        <div class="skills-wrap">
+          <span class="skill-pill">Python</span>
+          <span class="skill-pill">PyTorch</span>
+          <span class="skill-pill">TensorFlow</span>
+          <span class="skill-pill">Java</span>
+          <span class="skill-pill">SQL</span>
+          <span class="skill-pill">Docker</span>
+          <span class="skill-pill">Kubernetes</span>
+          <span class="skill-pill">PostgreSQL</span>
+          <span class="skill-pill">Cloud Computing</span>
+          <span class="skill-pill">LangChain</span>
+          <span class="skill-pill">Computer Vision</span>
+          <span class="skill-pill">NLP</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ══════════════ CONTACT ══════════════ -->
+<section class="section" id="contact">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">Get in touch</div>
+      <h2 class="section-title">Let's build something together</h2>
+      <p class="section-subtitle">
+        Interested in working together? Reach out and let's discuss your next AI project.
+      </p>
+    </div>
+
+    <div class="contact-grid reveal-stagger">
+      <a href="mailto:corneliuswiehl@gmail.com" class="contact-card">
+        <div class="contact-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </div>
+        <div class="contact-info">
+          <div class="contact-label">Email</div>
+          <div class="contact-value">corneliuswiehl@gmail.com</div>
+        </div>
+      </a>
+
+      <a href="tel:+4915788959428" class="contact-card">
+        <div class="contact-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+        </div>
+        <div class="contact-info">
+          <div class="contact-label">Phone</div>
+          <div class="contact-value">+49 157 889 59428</div>
+        </div>
+      </a>
+
+      <a href="https://github.com/unicorne" target="_blank" rel="noopener" class="contact-card">
+        <div class="contact-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="color: var(--accent);"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+        </div>
+        <div class="contact-info">
+          <div class="contact-label">GitHub</div>
+          <div class="contact-value">github.com/unicorne</div>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ FOOTER ══════════════ -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-logos">
+      <img src="logos/logo1.svg" alt="Logo 1">
+      <img src="logos/logo2.svg" alt="Logo 2">
+      <img src="logos/logo3.svg" alt="Logo 3">
+      <img src="logos/logo4.svg" alt="Logo 4">
+      <img src="logos/logo5.svg" alt="Logo 5">
+    </div>
+    <p>&copy; 2025 Cornelius Wiehl. All rights reserved.</p>
+  </div>
+</footer>
+
+<!-- ══════════════ COLOR CHANGER ══════════════ -->
+<div class="color-changer">
+  <div class="color-panel" id="colorPanel">
+    <h4>Theme Presets</h4>
+    <div class="preset-grid">
+      <button class="preset-btn active" onclick="applyPreset('midnight')">
+        <span class="swatch" style="background: #6ea8fe;"></span> Midnight
+      </button>
+      <button class="preset-btn" onclick="applyPreset('ocean')">
+        <span class="swatch" style="background: #0ea5e9;"></span> Ocean
+      </button>
+      <button class="preset-btn" onclick="applyPreset('aurora')">
+        <span class="swatch" style="background: #34d399;"></span> Aurora
+      </button>
+      <button class="preset-btn" onclick="applyPreset('ember')">
+        <span class="swatch" style="background: #f97316;"></span> Ember
+      </button>
+      <button class="preset-btn" onclick="applyPreset('rose')">
+        <span class="swatch" style="background: #fb7185;"></span> Rose
+      </button>
+      <button class="preset-btn" onclick="applyPreset('cyber')">
+        <span class="swatch" style="background: #a78bfa;"></span> Cyber
+      </button>
+    </div>
+    <h4>Custom Colors</h4>
+    <div class="color-custom">
+      <label>
+        <input type="color" id="customAccent" value="#6ea8fe" onchange="customColor('accent', this.value)">
+        Accent
+      </label>
+      <label>
+        <input type="color" id="customSecondary" value="#40d4c0" onchange="customColor('secondary', this.value)">
+        Secondary
+      </label>
+      <label>
+        <input type="color" id="customTertiary" value="#c4a0ff" onchange="customColor('tertiary', this.value)">
+        Tertiary
+      </label>
+    </div>
+  </div>
+  <button class="color-changer-toggle" onclick="toggleColorPanel()" aria-label="Change theme">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="5"/>
+      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    </svg>
+  </button>
+</div>
+
+<!-- ══════════════ SCRIPTS ══════════════ -->
+<script>
+// ── Navigation ──
+const nav = document.getElementById('nav');
+const navToggle = document.getElementById('navToggle');
+const navLinks = document.getElementById('navLinks');
+
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 50);
+});
+
+navToggle.addEventListener('click', () => {
+  navLinks.classList.toggle('open');
+});
+
+navLinks.querySelectorAll('a').forEach(link => {
+  link.addEventListener('click', () => navLinks.classList.remove('open'));
+});
+
+// Active nav link
+const sections = document.querySelectorAll('.section, .hero');
+const navAnchors = navLinks.querySelectorAll('a');
+
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(section => {
+    const top = section.offsetTop - 120;
+    if (window.scrollY >= top) current = section.id;
+  });
+  navAnchors.forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+  });
+});
+
+// ── Scroll Reveal ──
+const revealElements = document.querySelectorAll('.reveal, .reveal-stagger');
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) entry.target.classList.add('visible');
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+revealElements.forEach(el => revealObserver.observe(el));
+
+// ── Animation Rows — Expand to right on click ──
+let currentActiveRow = null;
+
+document.querySelectorAll('.anim-row').forEach(row => {
+  const trigger = row.querySelector('.anim-trigger');
+  const panel = row.querySelector('.anim-panel');
+
+  trigger.addEventListener('click', () => {
+    const animFile = row.dataset.anim;
+
+    if (row.classList.contains('active')) {
+      // Collapse current
+      row.classList.remove('active');
+      setTimeout(() => { panel.innerHTML = ''; }, 600);
+      currentActiveRow = null;
+    } else {
+      // Collapse previous first
+      if (currentActiveRow && currentActiveRow !== row) {
+        const prevRow = currentActiveRow;
+        const prevPanel = prevRow.querySelector('.anim-panel');
+        prevRow.classList.remove('active');
+        setTimeout(() => { prevPanel.innerHTML = ''; }, 600);
+      }
+
+      // Insert iframe, then trigger expand on next frame for smooth animation
+      panel.innerHTML = `<iframe src="final_animations/${animFile}" loading="lazy"></iframe>`;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          row.classList.add('active');
+        });
+      });
+      currentActiveRow = row;
+
+      // Broadcast theme to iframe
+      const iframe = panel.querySelector('iframe');
+      iframe.addEventListener('load', () => {
+        broadcastToIframe(iframe);
+      });
+    }
+  });
+});
+
+// ── Color Changer ──
+function toggleColorPanel() {
+  document.getElementById('colorPanel').classList.toggle('open');
+}
+
+document.addEventListener('click', (e) => {
+  const changer = document.querySelector('.color-changer');
+  if (!changer.contains(e.target)) {
+    document.getElementById('colorPanel').classList.remove('open');
+  }
+});
+
+const PRESETS = {
+  midnight: {
+    accent: '#6ea8fe', secondary: '#40d4c0', tertiary: '#c4a0ff',
+    accentGlow: 'rgba(110,168,254,0.25)', accentDim: 'rgba(110,168,254,0.06)',
+    secondaryGlow: 'rgba(64,212,192,0.2)', tertiaryGlow: 'rgba(196,160,255,0.2)',
+    void: '#06080e', bg: '#0a0f1a', bgAlt: '#0d1321',
+    surface: '#111827', surfaceHover: '#1a2332',
+    border: '#1e2a3a', borderLight: '#2a3a4e',
+    text: '#e8edf5', textSec: '#8b96a9', textMuted: '#4a5568',
+    animBg: '#0d1117', animSurface: '#161b22',
+    animBlue: '#58a6ff', animCyan: '#39d2c0', animGreen: '#3fb950',
+    animRed: '#f85149', animAmber: '#d29922', animPurple: '#bc8cff',
+  },
+  ocean: {
+    accent: '#38bdf8', secondary: '#06b6d4', tertiary: '#818cf8',
+    accentGlow: 'rgba(56,189,248,0.25)', accentDim: 'rgba(56,189,248,0.06)',
+    secondaryGlow: 'rgba(6,182,212,0.2)', tertiaryGlow: 'rgba(129,140,248,0.2)',
+    void: '#020617', bg: '#0c1222', bgAlt: '#0f172a',
+    surface: '#1e293b', surfaceHover: '#273548',
+    border: '#1e3a5f', borderLight: '#2d4a6f',
+    text: '#e2e8f0', textSec: '#94a3b8', textMuted: '#475569',
+    animBg: '#0c1222', animSurface: '#152238',
+    animBlue: '#0ea5e9', animCyan: '#06b6d4', animGreen: '#14b8a6',
+    animRed: '#ef4444', animAmber: '#f59e0b', animPurple: '#8b5cf6',
+  },
+  aurora: {
+    accent: '#34d399', secondary: '#22d3ee', tertiary: '#a78bfa',
+    accentGlow: 'rgba(52,211,153,0.25)', accentDim: 'rgba(52,211,153,0.06)',
+    secondaryGlow: 'rgba(34,211,238,0.2)', tertiaryGlow: 'rgba(167,139,250,0.2)',
+    void: '#030712', bg: '#071212', bgAlt: '#0a1a18',
+    surface: '#132b24', surfaceHover: '#1a3d30',
+    border: '#1a3d28', borderLight: '#2a5038',
+    text: '#dcfce7', textSec: '#86efac', textMuted: '#3d6b4a',
+    animBg: '#0b1a0e', animSurface: '#132b17',
+    animBlue: '#22c55e', animCyan: '#34d399', animGreen: '#4ade80',
+    animRed: '#f87171', animAmber: '#fbbf24', animPurple: '#a78bfa',
+  },
+  ember: {
+    accent: '#fb923c', secondary: '#f97316', tertiary: '#fbbf24',
+    accentGlow: 'rgba(251,146,60,0.25)', accentDim: 'rgba(251,146,60,0.06)',
+    secondaryGlow: 'rgba(249,115,22,0.2)', tertiaryGlow: 'rgba(251,191,36,0.2)',
+    void: '#0a0604', bg: '#18120b', bgAlt: '#1c150e',
+    surface: '#261c10', surfaceHover: '#302414',
+    border: '#3d2e1a', borderLight: '#4d3a22',
+    text: '#fef3c7', textSec: '#d6a36e', textMuted: '#6b4f30',
+    animBg: '#18120b', animSurface: '#261c10',
+    animBlue: '#f97316', animCyan: '#fb923c', animGreen: '#84cc16',
+    animRed: '#ef4444', animAmber: '#eab308', animPurple: '#a855f7',
+  },
+  rose: {
+    accent: '#fb7185', secondary: '#f43f5e', tertiary: '#e879f9',
+    accentGlow: 'rgba(251,113,133,0.25)', accentDim: 'rgba(251,113,133,0.06)',
+    secondaryGlow: 'rgba(244,63,94,0.2)', tertiaryGlow: 'rgba(232,121,249,0.2)',
+    void: '#0a0408', bg: '#1a0b12', bgAlt: '#1f0e17',
+    surface: '#2b1320', surfaceHover: '#351a28',
+    border: '#3d1a2a', borderLight: '#502238',
+    text: '#fce7f3', textSec: '#f9a8d4', textMuted: '#6b3d55',
+    animBg: '#1a0b12', animSurface: '#2b1320',
+    animBlue: '#f43f5e', animCyan: '#fb7185', animGreen: '#4ade80',
+    animRed: '#e11d48', animAmber: '#f59e0b', animPurple: '#c084fc',
+  },
+  cyber: {
+    accent: '#a78bfa', secondary: '#c084fc', tertiary: '#38bdf8',
+    accentGlow: 'rgba(167,139,250,0.25)', accentDim: 'rgba(167,139,250,0.06)',
+    secondaryGlow: 'rgba(192,132,252,0.2)', tertiaryGlow: 'rgba(56,189,248,0.2)',
+    void: '#07020e', bg: '#0e0618', bgAlt: '#130a1f',
+    surface: '#1e0f30', surfaceHover: '#28163e',
+    border: '#2a1a40', borderLight: '#3d2660',
+    text: '#ede9fe', textSec: '#c4b5fd', textMuted: '#5b4a80',
+    animBg: '#0e0618', animSurface: '#1e0f30',
+    animBlue: '#a78bfa', animCyan: '#c084fc', animGreen: '#34d399',
+    animRed: '#fb7185', animAmber: '#fbbf24', animPurple: '#e879f9',
+  },
+};
+
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function applyPreset(name) {
+  const p = PRESETS[name];
+  if (!p) return;
+
+  const root = document.documentElement.style;
+  root.setProperty('--accent', p.accent);
+  root.setProperty('--accent-glow', p.accentGlow);
+  root.setProperty('--accent-dim', p.accentDim);
+  root.setProperty('--secondary', p.secondary);
+  root.setProperty('--secondary-glow', p.secondaryGlow);
+  root.setProperty('--tertiary', p.tertiary);
+  root.setProperty('--tertiary-glow', p.tertiaryGlow);
+  root.setProperty('--void', p.void);
+  root.setProperty('--bg', p.bg);
+  root.setProperty('--bg-alt', p.bgAlt);
+  root.setProperty('--surface', p.surface);
+  root.setProperty('--surface-hover', p.surfaceHover);
+  root.setProperty('--border', p.border);
+  root.setProperty('--border-light', p.borderLight);
+  root.setProperty('--text', p.text);
+  root.setProperty('--text-sec', p.textSec);
+  root.setProperty('--text-muted', p.textMuted);
+
+  document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.closest('.preset-btn')?.classList.add('active');
+
+  document.getElementById('customAccent').value = p.accent;
+  document.getElementById('customSecondary').value = p.secondary;
+  document.getElementById('customTertiary').value = p.tertiary;
+
+  currentPresetAnimColors = {
+    blue: p.animBlue, cyan: p.animCyan, green: p.animGreen,
+    red: p.animRed, amber: p.animAmber, purple: p.animPurple,
+    bg: p.animBg, surface: p.animSurface,
+    void: p.void, border: p.border, borderLight: p.borderLight,
+    text: p.text, textSec: p.textSec, textMut: p.textMuted,
+  };
+  broadcastAllIframes();
+}
+
+let currentPresetAnimColors = {
+  blue: '#58a6ff', cyan: '#39d2c0', green: '#3fb950',
+  red: '#f85149', amber: '#d29922', purple: '#bc8cff',
+  bg: '#0d1117', surface: '#161b22',
+  void: '#08090d', border: '#21262d', borderLight: '#30363d',
+  text: '#e6edf3', textSec: '#8b949e', textMut: '#484f58',
+};
+
+function broadcastToIframe(iframe) {
+  if (iframe && iframe.contentWindow) {
+    iframe.contentWindow.postMessage({ type: 'theme', colors: currentPresetAnimColors }, '*');
+  }
+}
+
+function broadcastAllIframes() {
+  document.querySelectorAll('.anim-panel iframe').forEach(broadcastToIframe);
+}
+
+function customColor(key, value) {
+  const root = document.documentElement.style;
+  root.setProperty('--' + key, value);
+  root.setProperty('--' + key + '-glow', hexToRgba(value, 0.25));
+  root.setProperty('--' + key + '-dim', hexToRgba(value, 0.06));
+
+  document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+
+  if (key === 'accent') currentPresetAnimColors.blue = value;
+  if (key === 'secondary') currentPresetAnimColors.cyan = value;
+  if (key === 'tertiary') currentPresetAnimColors.purple = value;
+  broadcastAllIframes();
+}
+</script>
+
+</body>
+</html>
