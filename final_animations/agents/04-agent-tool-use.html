@@ -13,13 +13,13 @@
     font-family: 'IBM Plex Mono', -apple-system, monospace;
   }
   .wrap { width: 94vw; max-width: 900px; }
-  canvas { display: block; width: 100%; height: 520px; border-radius: 8px; background: #0d1117; }
+  canvas { display: block; width: 100%; height: 450px; border-radius: 8px; background: #0d1117; }
   .meta {
     display: flex; justify-content: space-between; align-items: center;
     padding: 10px 2px; color: #484f58; font-size: 10px; letter-spacing: 0.1em;
   }
   .meta span { color: #58a6ff; }
-  @media (max-width: 600px) { canvas { height: 420px; } }
+  @media (max-width: 600px) { canvas { height: 350px; } }
 </style>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
@@ -175,10 +175,10 @@
 
     // Layout
     const agentCx = W / 2;
-    const agentCy = H * 0.35;
+    const agentCy = H * 0.28;
     const agentR = 28 * s;
     const toolR = 20 * s;
-    const orbitR = mobile ? 95 * s : 130 * s;
+    const orbitR = mobile ? 150 * s : 130 * s;
 
     // ── Phase calculations ──
     const queryP = Math.max(0, Math.min(1, cycleT / 0.10));
@@ -191,7 +191,7 @@
     // ── User query (top) ──
     if (queryP > 0) {
       ctx.globalAlpha = queryP;
-      const qY = 30 * s;
+      const qY = 42 * s;
 
       // Query bubble
       ctx.font = `400 ${fontSize}px 'IBM Plex Mono', monospace`;

@@ -288,6 +288,7 @@ a:hover { color: var(--secondary); }
 .section {
   padding: var(--section-pad) 0;
   position: relative;
+  overflow: hidden;
 }
 
 .section-label {
@@ -1067,6 +1068,9 @@ a:hover { color: var(--secondary); }
   .hero-stats { flex-wrap: wrap; }
 
   .anim-trigger { padding: 12px 16px; }
+
+  .reveal { transform: translateY(16px); }
+  .reveal-stagger > * { transform: translateY(10px); }
 }
 
 @media (max-width: 480px) {
@@ -1077,6 +1081,17 @@ a:hover { color: var(--secondary); }
   .timeline-section-title::before { left: 6px; }
   .timeline-item { padding-left: 40px; }
   .timeline-item::before { left: 9px; }
+
+  .reveal {
+    transform: none;
+    transition: opacity 0.5s var(--ease);
+  }
+  .reveal.visible { transform: none; }
+  .reveal-stagger > * {
+    transform: none;
+    transition: opacity 0.4s var(--ease);
+  }
+  .reveal-stagger.visible > * { transform: none; }
 }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1118,7 +1133,7 @@ a:hover { color: var(--secondary); }
       <span class="gradient-text">AI solutions</span>
     </h1>
     <p class="hero-description">
-      Cornelius Wiehl: Senior Data Scientist & ML Engineer with 5+ years of experience
+      Senior Data Scientist & ML Engineer with 5+ years of experience
     </p>
     <div class="hero-stats">
       <div class="hero-stat">
@@ -1170,6 +1185,7 @@ a:hover { color: var(--secondary); }
           </div>
         </div>
         <div class="anim-list">
+          <!-- Hidden: Conversation Flow
           <div class="anim-row" data-anim="agents/03-conversation-flow.html">
             <div class="anim-trigger">
               <div class="anim-trigger-text">
@@ -1180,6 +1196,7 @@ a:hover { color: var(--secondary); }
             </div>
             <div class="anim-panel"><div class="anim-panel-inner"></div></div>
           </div>
+          -->
           <div class="anim-row" data-anim="agents/04-agent-tool-use.html">
             <div class="anim-trigger">
               <div class="anim-trigger-text">
