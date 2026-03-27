@@ -422,8 +422,6 @@
 
     /* ── Status label & activity dot ── */
     const statusFs = Math.max(7, 9 * s);
-    const statusText = mobile ? 'ASR — WHISPER' : 'ASR PIPELINE — WHISPER';
-    drawLabel(statusText, 68 * s + 16, 14 * s, T.textMut, statusFs);
     const dotR = Math.max(3, 3.5 * s);
     const dotColor = intensity > 0.5 ? T.green : (intensity > 0.1 ? T.amber : T.textMut);
     ctx.beginPath(); ctx.arc(14 * s, 10 * s, dotR, 0, Math.PI * 2);

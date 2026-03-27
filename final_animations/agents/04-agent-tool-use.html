@@ -8,18 +8,18 @@
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     background: #08090d;
-    display: flex; align-items: center; justify-content: center;
-    min-height: 100vh; overflow: hidden;
+    display: flex; align-items: flex-start; justify-content: center;
+    height: 100vh; overflow: hidden;
     font-family: 'IBM Plex Mono', -apple-system, monospace;
   }
-  .wrap { width: 94vw; max-width: 900px; }
-  canvas { display: block; width: 100%; height: 450px; border-radius: 8px; background: #0d1117; }
+  .wrap { width: 94vw; max-width: 900px; display: flex; flex-direction: column; height: 100vh; }
   .meta {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 2px; color: #484f58; font-size: 10px; letter-spacing: 0.1em;
+    padding: 8px 2px; color: #484f58; font-size: 10px; letter-spacing: 0.1em;
+    flex-shrink: 0;
   }
   .meta span { color: #58a6ff; }
-  @media (max-width: 600px) { canvas { height: 350px; } }
+  canvas { display: block; width: 100%; flex: 1; min-height: 0; border-radius: 8px; background: #0d1117; }
 </style>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
@@ -85,7 +85,7 @@
   resize();
   window.addEventListener('resize', resize);
 
-  function S(w) { return Math.max(0.45, w / 600); }
+  function S(w) { return Math.max(0.45, Math.min(w / 600, H / 450)); }
   function shadow(c, b) { if (!mobile) { ctx.shadowColor = c; ctx.shadowBlur = b; } }
   function drawGlow(x, y, r, c) {
     if (mobile) r *= 0.6;
@@ -173,12 +173,12 @@
     const fontSize = Math.max(9, 11 * s);
     const smallFs = Math.max(7, 8 * s);
 
-    // Layout
+    // Layout — use H-relative anchors for vertical positioning
     const agentCx = W / 2;
-    const agentCy = H * 0.28;
-    const agentR = 28 * s;
+    const agentCy = H * 0.35;
+    const agentR = mobile ? 28 * s : 36 * s;
     const toolR = 20 * s;
-    const orbitR = mobile ? 150 * s : 130 * s;
+    const orbitR = Math.min(130 * s, H * 0.28);
 
     // ── Phase calculations ──
     const queryP = Math.max(0, Math.min(1, cycleT / 0.10));
@@ -191,13 +191,13 @@
     // ── User query (top) ──
     if (queryP > 0) {
       ctx.globalAlpha = queryP;
-      const qY = 42 * s;
+      const qY = H * 0.07;
 
       // Query bubble
       ctx.font = `400 ${fontSize}px 'IBM Plex Mono', monospace`;
       const qText = sc.query;
       const qW = Math.min(W - padX * 2 - 20 * s, ctx.measureText(qText).width + 24 * s);
-      const qH = 32 * s;
+      const qH = 28 * s;
       const qX = W / 2 - qW / 2;
 
       ctx.fillStyle = T.surface;
@@ -231,7 +231,7 @@
       ctx.strokeStyle = colorAlpha(T.blue, 0.2);
       ctx.lineWidth = 1 * s;
       ctx.setLineDash([3 * s, 3 * s]);
-      ctx.moveTo(W / 2, 62 * s);
+      ctx.moveTo(W / 2, H * 0.07 + 28 * s + 4 * s);
       ctx.lineTo(W / 2, agentCy - agentR - 8 * s);
       ctx.stroke();
       ctx.setLineDash([]);
@@ -283,7 +283,7 @@
       const angle = toolCount === 1
         ? Math.PI * 0.5
         : arcStart + (i / (toolCount - 1)) * (arcEnd - arcStart);
-      const tx = agentCx + Math.cos(angle) * orbitR * (mobile ? 0.85 : 1);
+      const tx = agentCx + Math.cos(angle) * orbitR;
       const ty = agentCy + Math.sin(angle) * orbitR * 0.75;
       toolNodes.push({ x: tx, y: ty, angle });
     }
@@ -378,7 +378,7 @@
 
       // Result badge (appears when tool completes)
       if (toolDone) {
-        const badgeY = tn.y + toolR + 22 * s;
+        const badgeY = tn.y + toolR + 18 * s;
         ctx.font = `400 ${Math.max(6, 7 * s)}px 'IBM Plex Mono', monospace`;
         const resultW = ctx.measureText(tool.result).width + 12 * s;
         const badgeX = tn.x - resultW / 2;
@@ -412,8 +412,8 @@
     // ── Step indicator along the left ──
     const steps = ['PARSE', 'PLAN', ...tools.map(t => t.name.toUpperCase()), 'SYNTHESIZE'];
     const stepCount = steps.length;
-    const stepStartY = 80 * s;
-    const stepGap = (H - stepStartY - 40 * s) / (stepCount - 1);
+    const stepStartY = H * 0.15;
+    const stepGap = (H * 0.85 - stepStartY) / (stepCount - 1);
     const stepX = 14 * s;
 
     for (let i = 0; i < stepCount; i++) {
@@ -448,14 +448,14 @@
 
     // ── Final answer (bottom) ──
     if (answerP > 0) {
-      const aY = H - 30 * s;
+      const aY = H * 0.88;
       const charCount = Math.floor(answerP * sc.answer.length);
       const ansText = sc.answer.substring(0, charCount);
 
       // Answer bubble
       ctx.font = `400 ${fontSize}px 'IBM Plex Mono', monospace`;
       const aW = Math.min(W - padX * 2 - 20 * s, ctx.measureText(sc.answer).width + 24 * s);
-      const aH = 32 * s;
+      const aH = 28 * s;
       const aX = W / 2 - aW / 2;
 
       ctx.fillStyle = T.purpleDim;

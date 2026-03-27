@@ -293,27 +293,6 @@
     }
     packets.length = 0; packets.push(...kept);
 
-    // Legend: top-right
-    const legX = W - 10 * s;
-    const legY = 14 * s;
-    ctx.font = `400 ${Math.max(7, 8 * s)}px 'IBM Plex Mono', monospace`;
-    ctx.textAlign = 'right';
-
-    // Circle = normal
-    ctx.fillStyle = T.cyan;
-    ctx.beginPath(); ctx.arc(legX - 55 * s, legY, 3 * s, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = T.textMut;
-    ctx.fillText('NORMAL', legX - 42 * s, legY + 3 * s);
-
-    // Triangle = anomaly
-    drawTriangle(legX - 15 * s, legY, 4 * s, T.amber, T.amberGlow, 0);
-    ctx.fillStyle = T.textMut; ctx.textAlign = 'right';
-    ctx.fillText('▲', legX - 5 * s, legY + 3 * s);
-
-    // Replace with text
-    ctx.textAlign = 'right';
-    ctx.fillText('ANOMALY', legX, legY + 3 * s);
-
     // Status
     ctx.font = `500 ${Math.max(8, 10 * s)}px 'IBM Plex Mono', monospace`;
     ctx.fillStyle = T.textMut; ctx.textAlign = 'left';
