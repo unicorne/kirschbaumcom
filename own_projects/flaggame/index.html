@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Flag Master</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body style="margin:0;background:#0d1117;overflow:hidden">
+  <div id="flaggame">
+
+    <!-- ── Menu Screen ── -->
+    <div id="screen-menu" class="screen">
+      <div class="game-title">
+        <h1>FLAG MASTER</h1>
+        <p>Identify the flag. Beat the clock. Top the board.</p>
+      </div>
+
+      <div class="auth-box">
+        <h3>Player Login</h3>
+        <div id="auth-form">
+          <input type="text" id="input-user" placeholder="Username" autocomplete="username" maxlength="20">
+          <input type="password" id="input-pass" placeholder="Password" autocomplete="current-password">
+          <div class="auth-row">
+            <button class="btn btn-primary" id="btn-login" style="flex:1">Login</button>
+            <button class="btn" id="btn-register" style="flex:1">Register</button>
+          </div>
+          <button class="btn btn-ghost" id="btn-guest" style="width:100%;margin-top:8px">Play as Guest</button>
+        </div>
+        <div id="auth-logged" class="logged-in-box" style="display:none">
+          <span style="color:var(--fg-text-sec)">Playing as</span>
+          <span id="logged-username" class="username"></span>
+          <button class="btn btn-small btn-ghost btn-logout" id="btn-logout">Logout</button>
+        </div>
+        <div id="auth-msg" class="msg"></div>
+      </div>
+
+      <button class="btn-play" id="btn-play">
+        START GAME
+        <span style="display:block;font-size:13px;font-weight:400;opacity:0.7;margin-top:2px">30 seconds — press Enter</span>
+      </button>
+
+      <button class="btn btn-ghost" id="btn-settings" style="margin-top:12px">Key Bindings</button>
+
+      <div class="leaderboard" style="margin-top:32px">
+        <h3>Leaderboard</h3>
+        <div class="lb-list">
+          <div class="lb-empty">No scores yet. Be the first!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Game Screen ── -->
+    <div id="screen-game" class="screen">
+      <div class="game-hud">
+        <div class="hud-stat">
+          <div class="value time-value">30s</div>
+          <div class="label">Time</div>
+        </div>
+        <div class="timer-wrap">
+          <div class="timer-bar" style="width:100%"></div>
+        </div>
+        <div class="hud-stat">
+          <div class="value score-value">0</div>
+          <div class="label">Score</div>
+        </div>
+        <div class="hud-stat">
+          <div class="value streak-value">0x</div>
+          <div class="label">Streak</div>
+        </div>
+      </div>
+
+      <div class="question-area">
+        <div class="country-name">Loading...</div>
+      </div>
+
+      <div class="flags-grid">
+        <div class="flag-card" role="button" tabindex="0">
+          <img class="flag-img" src="" alt="Flag 1">
+          <span class="key-hint">D</span>
+        </div>
+        <div class="flag-card" role="button" tabindex="0">
+          <img class="flag-img" src="" alt="Flag 2">
+          <span class="key-hint">K</span>
+        </div>
+        <div class="flag-card" role="button" tabindex="0">
+          <img class="flag-img" src="" alt="Flag 3">
+          <span class="key-hint">C</span>
+        </div>
+        <div class="flag-card" role="button" tabindex="0">
+          <img class="flag-img" src="" alt="Flag 4">
+          <span class="key-hint">M</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Results Screen ── -->
+    <div id="screen-results" class="screen">
+      <div class="results-header">
+        <h2>Time's Up!</h2>
+        <p>Here's how you did</p>
+      </div>
+
+      <div class="final-score">0</div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-val" id="stat-correct" style="color:var(--fg-green)">0</div>
+          <div class="stat-label">Correct</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="stat-accuracy" style="color:var(--fg-blue)">0%</div>
+          <div class="stat-label">Accuracy</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="stat-streak" style="color:var(--fg-amber)">0</div>
+          <div class="stat-label">Best Streak</div>
+        </div>
+      </div>
+
+      <div class="results-actions">
+        <button class="btn-play" id="btn-again" style="max-width:240px;padding:14px 28px;font-size:16px">
+          PLAY AGAIN
+          <span style="display:block;font-size:12px;font-weight:400;opacity:0.7;margin-top:2px">press Enter</span>
+        </button>
+        <button class="btn" id="btn-menu">Menu</button>
+      </div>
+
+      <div class="leaderboard">
+        <h3>Leaderboard</h3>
+        <div class="lb-list">
+          <div class="lb-empty">No scores yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Settings Overlay ── -->
+    <div id="settings-overlay" class="settings-overlay">
+      <div class="settings-panel">
+        <div class="settings-header">
+          <h3>Key Bindings</h3>
+          <button class="btn btn-small btn-ghost" id="btn-settings-close">Close</button>
+        </div>
+        <p class="settings-desc">Click a field and press any key to rebind.</p>
+        <div class="key-binds-grid">
+          <div class="key-bind-row">
+            <span class="key-bind-label">Top Left</span>
+            <input class="key-bind-input" readonly>
+          </div>
+          <div class="key-bind-row">
+            <span class="key-bind-label">Top Right</span>
+            <input class="key-bind-input" readonly>
+          </div>
+          <div class="key-bind-row">
+            <span class="key-bind-label">Bottom Left</span>
+            <input class="key-bind-input" readonly>
+          </div>
+          <div class="key-bind-row">
+            <span class="key-bind-label">Bottom Right</span>
+            <input class="key-bind-input" readonly>
+          </div>
+        </div>
+        <button class="btn btn-small" id="btn-reset-keys" style="margin-top:12px;width:100%">Reset to Defaults (D K C M)</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="countries.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

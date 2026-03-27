@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luck vs. Skill — Cornelius Wiehl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void:         #06080e;
+  --bg:           #0a0f1a;
+  --bg-alt:       #0d1321;
+  --surface:      #111827;
+  --surface-hover: #1a2332;
+  --border:       #1e2a3a;
+  --border-light: #2a3a4e;
+  --accent:       #6ea8fe;
+  --accent-glow:  rgba(110,168,254,0.25);
+  --accent-dim:   rgba(110,168,254,0.06);
+  --secondary:    #40d4c0;
+  --tertiary:     #c4a0ff;
+  --text:         #e8edf5;
+  --text-sec:     #8b96a9;
+  --text-muted:   #4a5568;
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:    'IBM Plex Mono', 'Fira Code', monospace;
+  --font-body:    'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { height: 100%; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Nav ── */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(10,15,26,0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid transparent;
+  transition: all 0.3s var(--ease);
+  flex-shrink: 0;
+}
+.nav.scrolled { border-bottom-color: var(--border); box-shadow: 0 4px 30px rgba(0,0,0,0.15); }
+.nav-inner {
+  max-width: 1140px; margin: 0 auto;
+  padding: 0 clamp(20px, 4vw, 40px);
+  height: 64px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none; color: var(--text);
+}
+.nav-logo img { height: 28px; width: auto; }
+.nav-logo-text {
+  font-family: var(--font-mono);
+  font-size: 13px; font-weight: 600;
+  letter-spacing: 0.15em; color: var(--text);
+}
+.nav-links {
+  list-style: none; display: flex; gap: 32px;
+}
+.nav-links a {
+  font-size: 14px; font-weight: 500; color: var(--text-sec);
+  text-decoration: none; transition: color 0.3s; position: relative;
+}
+.nav-links a:hover, .nav-links a.active { color: var(--text); }
+.nav-links a::after {
+  content: ''; position: absolute; bottom: -4px; left: 0;
+  width: 0; height: 1.5px; background: var(--accent);
+  transition: width 0.3s var(--ease);
+}
+.nav-links a:hover::after, .nav-links a.active::after { width: 100%; }
+
+.back-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 500; color: var(--text-sec);
+  text-decoration: none; transition: color 0.3s;
+}
+.back-link:hover { color: var(--accent); }
+.back-link svg { width: 16px; height: 16px; }
+
+/* ── Page Layout ── */
+.page-header {
+  padding-top: 100px;
+  padding-bottom: 20px;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding-left: clamp(20px, 4vw, 40px);
+  padding-right: clamp(20px, 4vw, 40px);
+  flex-shrink: 0;
+}
+
+.iframe-wrapper {
+  flex: 1;
+  position: relative;
+  width: 100%;
+}
+
+.iframe-wrapper iframe {
+  width: 100%;
+  height: 100%;
+  min-height: calc(100vh - 150px);
+  border: none;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="../index.html" class="nav-logo">
+      <img src="../logos/logosharp2.png" alt="KirschbaumAI">
+      <span class="nav-logo-text">KIRSCHBAUM AI</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="../index.html#services">Services</a></li>
+      <li><a href="../index.html#projects">Projects</a></li>
+      <li><a href="../index.html#interests" class="active">Interests</a></li>
+      <li><a href="../index.html#about">About</a></li>
+      <li><a href="../index.html#contact">Contact</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="page-header">
+  <a href="../index.html#interests" class="back-link">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+    Back to Interests
+  </a>
+</div>
+
+<div class="iframe-wrapper">
+  <iframe src="../own_projects/luck_vs_skill.html" loading="lazy" title="Luck vs. Skill — A Statistical Analysis of Sports"></iframe>
+</div>
+
+<script>
+  window.addEventListener('scroll', () => {
+    document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 50);
+  });
+</script>
+</body>
+</html>

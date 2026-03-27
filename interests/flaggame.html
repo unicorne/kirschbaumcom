@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Flag Master — Cornelius Wiehl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../own_projects/flaggame/style.css">
+<style>
+:root {
+  --void:         #06080e;
+  --bg:           #0a0f1a;
+  --bg-alt:       #0d1321;
+  --surface:      #111827;
+  --surface-hover: #1a2332;
+  --border:       #1e2a3a;
+  --border-light: #2a3a4e;
+  --accent:       #6ea8fe;
+  --accent-glow:  rgba(110,168,254,0.25);
+  --accent-dim:   rgba(110,168,254,0.06);
+  --secondary:    #40d4c0;
+  --secondary-glow: rgba(64,212,192,0.2);
+  --tertiary:     #c4a0ff;
+  --text:         #e8edf5;
+  --text-sec:     #8b96a9;
+  --text-muted:   #4a5568;
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:    'IBM Plex Mono', 'Fira Code', monospace;
+  --font-body:    'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ── Nav ── */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(10,15,26,0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid transparent;
+  transition: all 0.3s var(--ease);
+}
+.nav.scrolled { border-bottom-color: var(--border); box-shadow: 0 4px 30px rgba(0,0,0,0.15); }
+.nav-inner {
+  max-width: 1140px; margin: 0 auto;
+  padding: 0 clamp(20px, 4vw, 40px);
+  height: 64px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none; color: var(--text);
+}
+.nav-logo img { height: 28px; width: auto; }
+.nav-logo-text {
+  font-family: var(--font-mono);
+  font-size: 13px; font-weight: 600;
+  letter-spacing: 0.15em; color: var(--text);
+}
+.nav-links {
+  list-style: none; display: flex; gap: 32px;
+}
+.nav-links a {
+  font-size: 14px; font-weight: 500; color: var(--text-sec);
+  text-decoration: none; transition: color 0.3s; position: relative;
+}
+.nav-links a:hover, .nav-links a.active { color: var(--text); }
+.nav-links a::after {
+  content: ''; position: absolute; bottom: -4px; left: 0;
+  width: 0; height: 1.5px; background: var(--accent);
+  transition: width 0.3s var(--ease);
+}
+.nav-links a:hover::after, .nav-links a.active::after { width: 100%; }
+
+.back-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 500; color: var(--text-sec);
+  text-decoration: none; transition: color 0.3s;
+}
+.back-link:hover { color: var(--accent); }
+.back-link svg { width: 16px; height: 16px; }
+
+/* ── Page Layout ── */
+.page-header {
+  padding-top: 100px;
+  padding-bottom: 20px;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding-left: clamp(20px, 4vw, 40px);
+  padding-right: clamp(20px, 4vw, 40px);
+}
+.page-content {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 20px 60px;
+  min-height: calc(100vh - 180px);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Flaggame overrides to match site theme ── */
+#flaggame {
+  --fg-bg: var(--bg);
+  --fg-surface: var(--surface);
+  --fg-surface-hover: var(--surface-hover);
+  --fg-border: var(--border);
+  --fg-border-light: var(--border-light);
+  --fg-blue: var(--accent);
+  --fg-blue-glow: var(--accent-glow);
+  --fg-blue-dim: var(--accent-dim);
+  --fg-cyan: var(--secondary);
+  --fg-cyan-glow: var(--secondary-glow);
+  --fg-green: #4ade80;
+  --fg-green-glow: rgba(74,222,128,0.3);
+  --fg-red: #f87171;
+  --fg-red-glow: rgba(248,81,73,0.4);
+  --fg-amber: #f0b429;
+  --fg-purple: var(--tertiary);
+  --fg-text: var(--text);
+  --fg-text-sec: var(--text-sec);
+  --fg-text-mut: var(--text-muted);
+  --fg-radius: 12px;
+  --fg-radius-sm: 8px;
+  --fg-radius-lg: 16px;
+
+  font-family: var(--font-body);
+  background: transparent;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0;
+  min-height: auto;
+  flex: 1;
+}
+
+#flaggame .game-title {
+  margin-top: 20px;
+}
+
+#flaggame .results-header {
+  margin-top: 20px;
+}
+
+/* ── Footer ── */
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.footer .container {
+  max-width: 1140px; margin: 0 auto;
+  padding: 0 clamp(20px, 4vw, 40px);
+}
+
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="../index.html" class="nav-logo">
+      <img src="../logos/logosharp2.png" alt="KirschbaumAI">
+      <span class="nav-logo-text">KIRSCHBAUM AI</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="../index.html#services">Services</a></li>
+      <li><a href="../index.html#projects">Projects</a></li>
+      <li><a href="../index.html#interests" class="active">Interests</a></li>
+      <li><a href="../index.html#about">About</a></li>
+      <li><a href="../index.html#contact">Contact</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="page-header">
+  <a href="../index.html#interests" class="back-link">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+    Back to Interests
+  </a>
+</div>
+
+<div class="page-content">
+  <div id="flaggame">
+
+    <!-- Menu Screen -->
+    <div id="screen-menu" class="screen">
+      <div class="game-title">
+        <h1>FLAG MASTER</h1>
+        <p>Identify the flag. Beat the clock. Top the board.</p>
+      </div>
+
+      <div class="auth-box">
+        <h3>Player Login</h3>
+        <div id="auth-form">
+          <input type="text" id="input-user" placeholder="Username" autocomplete="username" maxlength="20">
+          <input type="password" id="input-pass" placeholder="Password" autocomplete="current-password">
+          <div class="auth-row">
+            <button class="btn btn-primary" id="btn-login" style="flex:1">Login</button>
+            <button class="btn" id="btn-register" style="flex:1">Register</button>
+          </div>
+          <button class="btn btn-ghost" id="btn-guest" style="width:100%;margin-top:8px">Play as Guest</button>
+        </div>
+        <div id="auth-logged" class="logged-in-box" style="display:none">
+          <span style="color:var(--fg-text-sec)">Playing as</span>
+          <span id="logged-username" class="username"></span>
+          <button class="btn btn-small btn-ghost btn-logout" id="btn-logout">Logout</button>
+        </div>
+        <div id="auth-msg" class="msg"></div>
+      </div>
+
+      <button class="btn-play" id="btn-play">
+        START GAME
+        <span style="display:block;font-size:13px;font-weight:400;opacity:0.7;margin-top:2px">30 seconds — press Enter</span>
+      </button>
+
+      <button class="btn btn-ghost" id="btn-settings" style="margin-top:12px">Key Bindings</button>
+
+      <div class="leaderboard" style="margin-top:32px">
+        <h3>Leaderboard</h3>
+        <div class="lb-list">
+          <div class="lb-empty">No scores yet. Be the first!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="screen-game" class="screen">
+      <div class="game-hud">
+        <div class="hud-stat">
+          <div class="value time-value">30s</div>
+          <div class="label">Time</div>
+        </div>
+        <div class="timer-wrap">
+          <div class="timer-bar" style="width:100%"></div>
+        </div>
+        <div class="hud-stat">
+          <div class="value score-value">0</div>
+          <div class="label">Score</div>
+        </div>
+        <div class="hud-stat">
+          <div class="value streak-value">0x</div>
+          <div class="label">Streak</div>
+        </div>
+      </div>
+
+      <div class="question-area">
+        <div class="country-name">Loading...</div>
+      </div>
+
+      <div class="flags-grid">
+        <div class="flag-card" role="button" tabindex="0">
+          <img class="flag-img" src="" alt="Flag 1">
+          <span class="key-hint">D</span>
+        </div>
+        <div class="flag-card" role="button" tabindex="0">
+          <img class="flag-img" src="" alt="Flag 2">
+          <span class="key-hint">K</span>
+        </div>
+        <div class="flag-card" role="button" tabindex="0">
+          <img class="flag-img" src="" alt="Flag 3">
+          <span class="key-hint">C</span>
+        </div>
+        <div class="flag-card" role="button" tabindex="0">
+          <img class="flag-img" src="" alt="Flag 4">
+          <span class="key-hint">M</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Screen -->
+    <div id="screen-results" class="screen">
+      <div class="results-header">
+        <h2>Time's Up!</h2>
+        <p>Here's how you did</p>
+      </div>
+
+      <div class="final-score">0</div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-val" id="stat-correct" style="color:var(--fg-green)">0</div>
+          <div class="stat-label">Correct</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="stat-accuracy" style="color:var(--fg-blue)">0%</div>
+          <div class="stat-label">Accuracy</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="stat-streak" style="color:var(--fg-amber)">0</div>
+          <div class="stat-label">Best Streak</div>
+        </div>
+      </div>
+
+      <div class="results-actions">
+        <button class="btn-play" id="btn-again" style="max-width:240px;padding:14px 28px;font-size:16px">
+          PLAY AGAIN
+          <span style="display:block;font-size:12px;font-weight:400;opacity:0.7;margin-top:2px">press Enter</span>
+        </button>
+        <button class="btn" id="btn-menu">Menu</button>
+      </div>
+
+      <div class="leaderboard">
+        <h3>Leaderboard</h3>
+        <div class="lb-list">
+          <div class="lb-empty">No scores yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Overlay -->
+    <div id="settings-overlay" class="settings-overlay">
+      <div class="settings-panel">
+        <div class="settings-header">
+          <h3>Key Bindings</h3>
+          <button class="btn btn-small btn-ghost" id="btn-settings-close">Close</button>
+        </div>
+        <p class="settings-desc">Click a field and press any key to rebind.</p>
+        <div class="key-binds-grid">
+          <div class="key-bind-row">
+            <span class="key-bind-label">Top Left</span>
+            <input class="key-bind-input" readonly>
+          </div>
+          <div class="key-bind-row">
+            <span class="key-bind-label">Top Right</span>
+            <input class="key-bind-input" readonly>
+          </div>
+          <div class="key-bind-row">
+            <span class="key-bind-label">Bottom Left</span>
+            <input class="key-bind-input" readonly>
+          </div>
+          <div class="key-bind-row">
+            <span class="key-bind-label">Bottom Right</span>
+            <input class="key-bind-input" readonly>
+          </div>
+        </div>
+        <button class="btn btn-small" id="btn-reset-keys" style="margin-top:12px;width:100%">Reset to Defaults (D K C M)</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>&copy; 2025 Cornelius Wiehl. All rights reserved.</p>
+  </div>
+</footer>
+
+<script src="../own_projects/flaggame/countries.js"></script>
+<script src="../own_projects/flaggame/game.js"></script>
+<script>
+  window.addEventListener('scroll', () => {
+    document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 50);
+  });
+</script>
+</body>
+</html>
