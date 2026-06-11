@@ -1,0 +1,47 @@
+name: Deploy to FTP
+
+# Push-to-deploy: any push to main uploads only the changed files to the
+# web host over implicit FTPS (port 990). Replaces the manual FileZilla step.
+# Can also be run on demand from the Actions tab (workflow_dispatch).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ftp-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy via FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: corneliuswiehl.de
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps-legacy   # implicit FTPS
+          port: 990
+          local-dir: ./
+          server-dir: ./          # FTP login lands in the web root
+          # The action keeps a .ftp-deploy-sync-state.json on the server so it
+          # only uploads files that actually changed. Safe mode: never deletes.
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/.DS_Store
+            .github/**
+            .claude/**
+            .vscode/**
+            .gitignore
+            designs/**
+            animation-framework.jsx
+            animation.md
+            animation_example.html
