@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skull King — Multiplayer Card Game — Cornelius Wiehl</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../own_projects/skullking/skull-king-cards.css">
+<style>
+:root {
+  --void:         #06080e;
+  --bg:           #0a0f1a;
+  --bg-alt:       #0d1321;
+  --surface:      #111827;
+  --surface-hover: #1a2332;
+  --border:       #1e2a3a;
+  --border-light: #2a3a4e;
+  --accent:       #6ea8fe;
+  --secondary:    #40d4c0;
+  --tertiary:     #c4a0ff;
+  /* Skull King brand — pirate gold + teal, mirrors the live app */
+  --gold:         #d9a441;
+  --gold-light:   #f3cf7a;
+  --gold-glow:    rgba(217,164,65,0.30);
+  --gold-dim:     rgba(217,164,65,0.08);
+  --teal:         #52d8c9;
+  --text:         #e8edf5;
+  --text-sec:     #8b96a9;
+  --text-muted:   #4a5568;
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:    'IBM Plex Mono', 'Fira Code', monospace;
+  --font-body:    'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ── Nav (matches site) ── */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(10,15,26,0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid transparent;
+  transition: all 0.3s var(--ease);
+}
+.nav.scrolled { border-bottom-color: var(--border); box-shadow: 0 4px 30px rgba(0,0,0,0.15); }
+.nav-inner {
+  max-width: 1140px; margin: 0 auto;
+  padding: 0 clamp(20px, 4vw, 40px);
+  height: 64px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+.nav-logo img { height: 28px; width: auto; }
+.nav-logo-text { font-family: var(--font-mono); font-size: 13px; font-weight: 600; letter-spacing: 0.15em; color: var(--text); }
+.nav-links { list-style: none; display: flex; gap: 32px; }
+.nav-links a { font-size: 14px; font-weight: 500; color: var(--text-sec); text-decoration: none; transition: color 0.3s; position: relative; }
+.nav-links a:hover, .nav-links a.active { color: var(--text); }
+.nav-links a::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 1.5px; background: var(--gold); transition: width 0.3s var(--ease); }
+.nav-links a:hover::after, .nav-links a.active::after { width: 100%; }
+
+.back-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 500; color: var(--text-sec);
+  text-decoration: none; transition: color 0.3s;
+}
+.back-link:hover { color: var(--gold); }
+.back-link svg { width: 16px; height: 16px; }
+
+/* ── Page layout ── */
+.page-header {
+  padding-top: 100px;
+  padding-bottom: 8px;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding-left: clamp(20px, 4vw, 40px);
+  padding-right: clamp(20px, 4vw, 40px);
+}
+.wrap {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0 clamp(20px, 4vw, 40px) 80px;
+}
+
+/* ── Hero ── */
+.hero {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 120% at 50% -10%, rgba(217,164,65,0.10), transparent 55%),
+    linear-gradient(180deg, var(--bg-alt), var(--surface));
+  padding: clamp(32px, 6vw, 56px) clamp(20px, 5vw, 56px);
+  text-align: center;
+}
+.hero-glow {
+  position: absolute; left: 50%; top: -120px; transform: translateX(-50%);
+  width: 620px; height: 360px; border-radius: 50%;
+  background: var(--gold-glow); filter: blur(100px);
+  animation: glowPulse 6s ease-in-out infinite; pointer-events: none;
+}
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.5; transform: translateX(-50%) scale(1); }
+  50%      { opacity: 0.8; transform: translateX(-50%) scale(1.08); }
+}
+
+.hero-content { position: relative; z-index: 2; }
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid var(--gold-glow);
+  background: var(--gold-dim);
+  color: var(--gold-light);
+  font-family: var(--font-mono);
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  padding: 6px 14px; border-radius: 999px;
+  margin-bottom: 22px;
+}
+.badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); animation: glowPulse 2s ease-in-out infinite; }
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(36px, 7vw, 64px);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+}
+.hero h1 .em { color: var(--gold); text-shadow: 0 0 30px var(--gold-glow); }
+.hero p.lead {
+  max-width: 540px; margin: 22px auto 0;
+  font-size: clamp(15px, 2.2vw, 18px);
+  color: var(--text-sec); line-height: 1.65;
+}
+
+.cta-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-top: 30px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: var(--font-display); font-weight: 700;
+  font-size: 16px; text-decoration: none;
+  padding: 14px 28px; border-radius: 12px;
+  transition: all 0.25s var(--ease); cursor: pointer; border: 1px solid transparent;
+}
+.btn-play { background: linear-gradient(180deg, var(--gold-light), var(--gold) 60%, #b3832e); color: #241703; box-shadow: 0 10px 30px var(--gold-glow); }
+.btn-play:hover { filter: brightness(1.06); transform: translateY(-2px); box-shadow: 0 16px 40px var(--gold-glow); }
+.btn-play svg { transition: transform 0.25s var(--ease); }
+.btn-play:hover svg { transform: translateX(3px); }
+.btn-ghost { background: rgba(255,255,255,0.03); color: var(--text); border-color: var(--border-light); }
+.btn-ghost:hover { border-color: var(--gold); color: var(--gold-light); transform: translateY(-2px); }
+.btn svg { width: 18px; height: 18px; }
+
+/* ── Interactive card deck (vendored from the game) ── */
+.card-stage { position: relative; z-index: 2; margin-top: 40px; }
+.card-stage .sk-deck { gap: 18px; }
+.card-stage .sk-slot { width: 152px; height: 212px; }
+.card-hint { margin-top: 18px; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); letter-spacing: 0.04em; }
+
+/* ── Meta stats ── */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 28px; }
+.stat { border: 1px solid var(--border); border-radius: 12px; background: var(--bg-alt); padding: 18px 16px; text-align: center; }
+.stat .num { font-family: var(--font-display); font-weight: 800; font-size: 24px; color: var(--gold); }
+.stat .lbl { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--text-sec); margin-top: 4px; text-transform: uppercase; }
+
+/* ── How it works ── */
+.section-label { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+.section-title { font-family: var(--font-display); font-weight: 800; font-size: 28px; letter-spacing: -0.01em; }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 28px; }
+.step { border: 1px solid var(--border); border-radius: 14px; background: var(--bg-alt); padding: 22px; transition: all 0.3s var(--ease); }
+.step:hover { border-color: var(--gold-glow); background: var(--surface); transform: translateY(-3px); }
+.step .n { font-family: var(--font-display); font-weight: 800; font-size: 30px; color: var(--gold); }
+.step h4 { font-size: 16px; font-weight: 700; margin: 10px 0 6px; }
+.step p { font-size: 14px; color: var(--text-sec); line-height: 1.6; }
+
+/* ── Bot callout ── */
+.bot-callout {
+  margin-top: 16px; display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center;
+  border: 1px solid var(--gold-glow); border-radius: 14px;
+  background: linear-gradient(180deg, var(--gold-dim), transparent);
+  padding: 20px 22px;
+}
+.bot-callout .skull { font-size: 40px; line-height: 1; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4)); }
+.bot-callout h4 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.bot-callout p { font-size: 14px; color: var(--text-sec); line-height: 1.6; }
+.bot-callout code { font-family: var(--font-mono); font-size: 12.5px; color: var(--gold-light); background: var(--gold-dim); padding: 1px 6px; border-radius: 4px; }
+
+.spacer-lg { height: 56px; }
+
+/* ── Footer ── */
+.footer { border-top: 1px solid var(--border); padding: 40px 0; text-align: center; font-size: 14px; color: var(--text-muted); }
+.footer .container { max-width: 1140px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 40px); }
+
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  .card-stage .sk-slot { width: 124px; height: 173px; }
+  .card-stage .sk-deck { gap: 12px; }
+  .bot-callout { grid-template-columns: 1fr; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="../index.html" class="nav-logo">
+      <img src="../logos/logosharp2.png" alt="KirschbaumAI">
+      <span class="nav-logo-text">KIRSCHBAUM AI</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="../index.html#services">Services</a></li>
+      <li><a href="../index.html#projects">Projects</a></li>
+      <li><a href="../index.html#interests" class="active">Interests</a></li>
+      <li><a href="../index.html#about">About</a></li>
+      <li><a href="../index.html#contact">Contact</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="page-header">
+  <a href="../index.html#interests" class="back-link">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+    Back to Interests
+  </a>
+</div>
+
+<div class="wrap">
+
+  <!-- ── HERO ── -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+
+    <div class="hero-content">
+      <div class="badge"><span class="dot"></span>Multiplayer · 2–8 players · play with bots</div>
+      <h1>Set sail with<br><span class="em">Skull King</span></h1>
+      <p class="lead">
+        A polished, mobile-first multiplayer build of the pirate trick-taking game.
+        Share a 4-letter room code with friends, fill empty seats with AI bots — and
+        try to out-bid a superhuman search engine.
+      </p>
+
+      <div class="cta-row">
+        <a class="btn btn-play" href="https://skullking-production.up.railway.app/" target="_blank" rel="noopener noreferrer">
+          Play now
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+        </a>
+        <a class="btn btn-ghost" href="https://github.com/unicorne/skullking" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          View source
+        </a>
+      </div>
+
+      <!-- real game cards, rendered + wired by the vendored deck system -->
+      <div class="card-stage">
+        <div class="sk-deck" id="sk-hero"></div>
+        <div class="card-hint">hover to tilt · click any card to flip</div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="num">2–8</div><div class="lbl">Players</div></div>
+        <div class="stat"><div class="num">66</div><div class="lbl">Card deck</div></div>
+        <div class="stat"><div class="num">ISMCTS</div><div class="lbl">Hard bot AI</div></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="spacer-lg"></div>
+
+  <!-- ── HOW IT WORKS ── -->
+  <section>
+    <div class="section-label">The Game</div>
+    <h2 class="section-title">How it works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="n">01</div>
+        <h4>Create a crew</h4>
+        <p>One player opens the link and taps <em>Create a Crew</em> — they get a 4-letter room code to share.</p>
+      </div>
+      <div class="step">
+        <div class="n">02</div>
+        <h4>Friends join</h4>
+        <p>Everyone joins from their own phone with the code. 2–8 players per table.</p>
+      </div>
+      <div class="step">
+        <div class="n">03</div>
+        <h4>Fill seats with bots</h4>
+        <p>Short a few players? Drop in Easy, Medium, or Hard AI bots straight from the lobby.</p>
+      </div>
+      <div class="step">
+        <div class="n">04</div>
+        <h4>Bid &amp; sail</h4>
+        <p>Predict exactly how many tricks you'll take each round — nail it for points, miss and pay.</p>
+      </div>
+    </div>
+
+    <div class="bot-callout">
+      <div class="skull">☠️</div>
+      <div>
+        <h4>The Hard bot plays to win</h4>
+        <p>
+          It runs <strong>Information Set Monte Carlo Tree Search</strong> — sampling hundreds of hidden-hand
+          worlds consistent with everything it has observed (<code>~400 worlds per bid</code>), then running a
+          UCT tree search rolled out to the end of each round. No GPU, no training data — just search.
+        </p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>&copy; 2025 Cornelius Wiehl. All rights reserved.</p>
+  </div>
+</footer>
+
+<script src="../own_projects/skullking/skull-king-cards.js"></script>
+<script>
+  // Render a curated hand of the game's signature special cards, then wire
+  // up tilt / flip / particle effects from the vendored card system.
+  SkullKing.renderDeck('#sk-hero', [
+    { type: 'skullking' },
+    { type: 'pirate', name: 'rosie' },
+    { type: 'mermaid', name: 'alyra' },
+    { type: 'kraken' }
+  ]);
+  SkullKing.init();
+
+  window.addEventListener('scroll', () => {
+    document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 50);
+  });
+</script>
+</body>
+</html>

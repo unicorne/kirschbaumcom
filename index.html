@@ -827,6 +827,74 @@ a:hover { color: var(--secondary); }
   filter: drop-shadow(0 4px 20px rgba(0,0,0,0.3));
 }
 
+/* gentle idle motion for icon-based previews */
+.preview-icon--flag {
+  transform-origin: 12% 85%;
+  animation: flagWave 3.2s ease-in-out infinite;
+}
+@keyframes flagWave {
+  0%, 100% { transform: rotate(-4deg) skewX(0deg); }
+  35%      { transform: rotate(3deg) skewX(-5deg); }
+  70%      { transform: rotate(4deg) skewX(4deg); }
+}
+.interest-card:hover .preview-icon--flag { animation-duration: 1.6s; }
+
+.preview-icon--dice {
+  animation: diceRock 3.6s ease-in-out infinite;
+}
+@keyframes diceRock {
+  0%, 100% { transform: rotate(-7deg) translateY(0); }
+  50%      { transform: rotate(7deg) translateY(-6px); }
+}
+.interest-card:hover .preview-icon--dice {
+  animation: diceRoll 0.7s ease-in-out;
+}
+@keyframes diceRoll {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.preview-icon--chat {
+  animation: chatBob 3.4s ease-in-out infinite;
+}
+@keyframes chatBob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-7px) rotate(-3deg); }
+}
+.preview-icon--chat .notif-badge {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #f87171;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 22px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(248,113,113,0.5);
+  animation: notifPop 3.4s ease-in-out infinite;
+}
+@keyframes notifPop {
+  0%, 70%, 100% { transform: scale(1); }
+  78%           { transform: scale(1.28); }
+  86%           { transform: scale(0.94); }
+  94%           { transform: scale(1.08); }
+}
+
+.preview-icon--skull {
+  animation: skullBob 4s ease-in-out infinite;
+}
+@keyframes skullBob {
+  0%, 100% { transform: translateY(2px) rotate(-5deg); }
+  50%      { transform: translateY(-8px) rotate(5deg); }
+}
+.interest-card:hover .preview-icon--skull { animation-duration: 2s; }
+
 .interest-card-body {
   padding: 24px;
   flex: 1;
@@ -1062,6 +1130,49 @@ a:hover { color: var(--secondary); }
   color: var(--text-muted);
   margin-top: 4px;
 }
+
+.thesis-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 18px;
+  margin-top: 12px;
+  transition: all 0.3s var(--ease);
+}
+.thesis-card:hover { border-color: var(--border-light); transform: translateY(-2px); }
+.thesis-card .thesis-grade {
+  flex-shrink: 0;
+  width: 56px;
+  text-align: center;
+}
+.thesis-card .thesis-grade .num {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+.thesis-card .thesis-grade .lbl {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+.thesis-card .thesis-info { border-left: 1px solid var(--border); padding-left: 16px; }
+.thesis-card .thesis-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+.thesis-card .thesis-title { font-size: 14px; color: var(--text-sec); line-height: 1.5; }
 
 .skills-wrap {
   display: flex;
@@ -1904,6 +2015,46 @@ a:hover { color: var(--secondary); }
 
     <div class="interests-grid reveal">
 
+      <a href="interests/skullking.html" class="interest-card">
+        <div class="interest-card-preview" style="background: linear-gradient(135deg, var(--surface) 0%, var(--bg-alt) 100%);">
+          <div class="interest-card-preview-bg" style="background: linear-gradient(135deg, #d9a441, #52d8c9);"></div>
+          <div class="preview-icon preview-icon--skull">☠️</div>
+          <div class="interest-card-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>
+          </div>
+        </div>
+        <div class="interest-card-body">
+          <h3>Skull King — Multiplayer Card Game</h3>
+          <p>A mobile-first multiplayer build of the pirate trick-taking game. Play with friends over a room code, fill seats with AI bots — including a superhuman ISMCTS bot that searches ~400 hidden-hand worlds per bid.</p>
+          <div class="interest-card-tags">
+            <span class="interest-card-tag">TypeScript</span>
+            <span class="interest-card-tag">Multiplayer</span>
+            <span class="interest-card-tag">Game AI</span>
+            <span class="interest-card-tag">ISMCTS</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="interests/fraguns.html" class="interest-card">
+        <div class="interest-card-preview" style="background: linear-gradient(135deg, var(--surface) 0%, var(--bg-alt) 100%);">
+          <div class="interest-card-preview-bg" style="background: linear-gradient(135deg, #34c7b0, #2d8b7a);"></div>
+          <div class="preview-icon preview-icon--chat">💬<span class="notif-badge">1</span></div>
+          <div class="interest-card-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>
+          </div>
+        </div>
+        <div class="interest-card-body">
+          <h3>FragUns — Daily Questions</h3>
+          <p>A PWA that drops one new question into your friend group every day, pings everyone via push notifications, reveals answers after the deadline, then opens a comment thread for the banter.</p>
+          <div class="interest-card-tags">
+            <span class="interest-card-tag">Next.js</span>
+            <span class="interest-card-tag">PWA</span>
+            <span class="interest-card-tag">Web Push</span>
+            <span class="interest-card-tag">Supabase</span>
+          </div>
+        </div>
+      </a>
+
       <a href="interests/dream-xi.html" class="interest-card">
         <div class="interest-card-preview" style="background: linear-gradient(135deg, var(--surface) 0%, var(--bg-alt) 100%);">
           <div class="preview-pitch">
@@ -1933,7 +2084,7 @@ a:hover { color: var(--secondary); }
       <a href="interests/flaggame.html" class="interest-card">
         <div class="interest-card-preview" style="background: linear-gradient(135deg, var(--surface) 0%, var(--bg-alt) 100%);">
           <div class="interest-card-preview-bg" style="background: linear-gradient(135deg, var(--accent), var(--secondary));"></div>
-          <div class="preview-icon">🏳️</div>
+          <div class="preview-icon preview-icon--flag">🏳️</div>
           <div class="interest-card-arrow">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>
           </div>
@@ -1953,7 +2104,7 @@ a:hover { color: var(--secondary); }
       <a href="interests/luck-vs-skill.html" class="interest-card">
         <div class="interest-card-preview" style="background: linear-gradient(135deg, var(--surface) 0%, var(--bg-alt) 100%);">
           <div class="interest-card-preview-bg" style="background: linear-gradient(135deg, #f5a623, #22d3ee);"></div>
-          <div class="preview-icon">🎲</div>
+          <div class="preview-icon preview-icon--dice">🎲</div>
           <div class="interest-card-arrow">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>
           </div>
@@ -2046,7 +2197,7 @@ a:hover { color: var(--secondary); }
           <div class="edu-badge">
             <div class="degree">M.Sc.</div>
             <div class="field">Machine Learning</div>
-            <div class="grade">1.36</div>
+            <div class="grade">1.3</div>
             <div class="school">Uni Tuebingen, 2022–2025</div>
           </div>
           <div class="edu-badge">
@@ -2066,6 +2217,17 @@ a:hover { color: var(--secondary); }
             <div class="field">Exchange</div>
             <div class="grade" style="font-size:14px;">Lisbon</div>
             <div class="school">Nova de Lisboa, 2024–2025</div>
+          </div>
+        </div>
+
+        <div class="thesis-card">
+          <div class="thesis-grade">
+            <div class="num">1.13</div>
+            <div class="lbl">Thesis</div>
+          </div>
+          <div class="thesis-info">
+            <div class="thesis-label">M.Sc. Thesis</div>
+            <div class="thesis-title">Diffusion Models for Contrast-Invariant Motion Correction in Multi-parametric MRI</div>
           </div>
         </div>
 

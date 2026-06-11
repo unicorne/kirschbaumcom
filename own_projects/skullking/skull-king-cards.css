@@ -1,0 +1,78 @@
+/* ============================================================================
+   Skull King — card visual system
+   Drop-in CSS. Pair with skull-king-cards.js.
+   Every class is namespaced `sk-` to avoid clashing with your game.
+   ========================================================================== */
+
+.sk-deck{display:flex;flex-wrap:wrap;gap:22px;justify-content:center;align-items:center}
+
+.sk-slot{width:188px;height:262px;perspective:1100px;animation:sk-flt 6s ease-in-out infinite}
+.sk-slot.sk-still{animation:none}
+@keyframes sk-flt{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+
+.sk-tilter{width:100%;height:100%;transition:transform .14s ease-out;transform-style:preserve-3d}
+.sk-flipper{position:relative;width:100%;height:100%;transition:transform .8s cubic-bezier(.2,.8,.2,1);transform-style:preserve-3d;cursor:pointer}
+.sk-flipper.sk-flipped{transform:rotateY(180deg)}
+
+.sk-face{position:absolute;inset:0;border-radius:14px;overflow:hidden;backface-visibility:hidden;box-shadow:0 16px 30px rgba(20,18,12,.34),0 4px 9px rgba(20,18,12,.24)}
+.sk-face svg{display:block;width:100%;height:100%}
+.sk-back{transform:rotateY(180deg);background:#0C2A2C}
+.sk-back-pat{position:absolute;inset:0;background:repeating-radial-gradient(circle at 50% 44%,rgba(191,154,78,0) 0 9px,rgba(191,154,78,.13) 9px 10px),repeating-radial-gradient(circle at 50% 44%,rgba(191,154,78,0) 0 26px,rgba(191,154,78,.06) 26px 27px)}
+.sk-back-bdr{position:absolute;inset:9px;border:1px solid #BF9A4E;border-radius:8px}
+.sk-back-mono{position:absolute;left:50%;top:46%;width:96px;height:96px;transform:translate(-50%,-50%)}
+
+/* ---- foils (faction rarity tell) ------------------------------------------ */
+.sk-holo{position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(255,60,160,0) 18%,rgba(255,60,160,.26) 32%,rgba(90,200,255,.26) 43%,rgba(120,255,190,.26) 52%,rgba(255,225,120,.26) 62%,rgba(255,60,160,0) 78%);background-size:320% 320%;mix-blend-mode:color-dodge;opacity:.42;animation:sk-holo 6.8s linear infinite}
+.sk-holo-soft{position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(120,180,255,0) 24%,rgba(150,205,255,.38) 42%,rgba(220,240,255,.45) 52%,rgba(255,255,255,.4) 62%,rgba(120,180,255,0) 78%);background-size:300% 300%;mix-blend-mode:overlay;opacity:.6;animation:sk-holo 6.5s linear infinite}
+.sk-sheen{position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,0) 33%,rgba(255,255,255,.55) 47%,rgba(255,255,255,0) 60%);background-size:280% 280%;mix-blend-mode:soft-light;animation:sk-holo 5.5s ease-in-out infinite}
+@keyframes sk-holo{0%{background-position:0% 50%}100%{background-position:220% 50%}}
+
+.sk-glare{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at var(--mx,50%) var(--my,28%),rgba(255,255,255,.4),rgba(255,255,255,0) 40%);opacity:0;transition:opacity .25s;mix-blend-mode:screen}
+.sk-slot:hover .sk-glare{opacity:1}
+
+.sk-glint{position:absolute;top:-40%;left:-60%;width:32%;height:180%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);transform:rotate(18deg);mix-blend-mode:screen;pointer-events:none;animation:sk-glint 5.5s ease-in-out infinite}
+@keyframes sk-glint{0%{left:-60%}24%{left:160%}100%{left:160%}}
+
+.sk-caustic{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(58deg,rgba(170,235,255,0) 0 13px,rgba(170,235,255,.12) 13px 17px,rgba(170,235,255,0) 17px 30px);mix-blend-mode:screen;opacity:.55;animation:sk-cau 9s linear infinite}
+@keyframes sk-cau{0%{background-position:0 0}100%{background-position:130px 70px}}
+
+.sk-particles{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.sk-particles span{position:absolute;bottom:-8px;border-radius:50%;opacity:0;animation:sk-rise linear infinite}
+@keyframes sk-rise{0%{transform:translateY(0) scale(.8);opacity:0}12%{opacity:.85}88%{opacity:.5}100%{transform:translateY(-260px) scale(1.1);opacity:0}}
+
+/* ---- per-card animated parts (targeted inside the SVGs) ------------------- */
+@keyframes sk-swy{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+@keyframes sk-glow{0%,100%{opacity:.22;transform:scale(.84)}50%{opacity:.9;transform:scale(1.14)}}
+@keyframes sk-twk{0%,100%{opacity:.5;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
+@keyframes sk-blink{0%,90%,100%{transform:scaleY(0)}94%,97%{transform:scaleY(1)}}
+@keyframes sk-spin{to{transform:rotate(360deg)}}
+@keyframes sk-bob{0%,100%{transform:translateY(0) rotate(-1.2deg)}50%{transform:translateY(-6px) rotate(1.2deg)}}
+@keyframes sk-spray{0%{opacity:0;transform:translateY(5px) scale(.9)}40%{opacity:.9}100%{opacity:0;transform:translateY(-12px) scale(1.15)}}
+@keyframes sk-shimmer{0%,100%{opacity:.45}50%{opacity:.85}}
+@keyframes sk-flag{0%,100%{transform:skewY(-4deg) scaleX(.98)}50%{transform:skewY(4deg) scaleX(1.02)}}
+@keyframes sk-ear{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+
+.sk-glow{transform-box:fill-box;transform-origin:center;animation:sk-glow 3s ease-in-out infinite}
+.sk-ember{animation:sk-glow 3.1s ease-in-out infinite}
+.sk-jewel{transform-box:fill-box;transform-origin:center;animation:sk-twk 2.4s ease-in-out infinite}
+.sk-d1{animation-delay:.5s}.sk-d2{animation-delay:1s}.sk-d3{animation-delay:1.5s}
+.sk-hair{transform-box:fill-box;transform-origin:50% 0;animation:sk-swy 5s ease-in-out infinite}
+.sk-tail{transform-box:fill-box;transform-origin:50% 0;animation:sk-swy 6.5s ease-in-out infinite}
+.sk-crest{transform-box:fill-box;transform-origin:50% 100%;animation:sk-swy 4.5s ease-in-out infinite}
+.sk-tent1{transform-box:fill-box;transform-origin:50% 100%;animation:sk-swy 5s ease-in-out infinite}
+.sk-tent2{transform-box:fill-box;transform-origin:50% 100%;animation:sk-swy 6.4s ease-in-out infinite;animation-delay:-1.5s}
+.sk-tent3{transform-box:fill-box;transform-origin:50% 100%;animation:sk-swy 5.6s ease-in-out infinite;animation-delay:-3s}
+.sk-rose{transform-box:fill-box;transform-origin:center;animation:sk-swy 7s ease-in-out infinite}
+.sk-lid{transform-box:fill-box;transform-origin:center;animation:sk-blink 4.5s infinite}
+.sk-rays{transform-box:fill-box;transform-origin:center;animation:sk-spin 55s linear infinite}
+.sk-whale{transform-box:fill-box;transform-origin:50% 50%;animation:sk-bob 7s ease-in-out infinite}
+.sk-spray{transform-box:fill-box;transform-origin:50% 100%;animation:sk-spray 3.4s ease-in-out infinite}
+.sk-godrays{animation:sk-shimmer 6s ease-in-out infinite}
+.sk-flag{transform-box:fill-box;transform-origin:0% 50%;animation:sk-flag 2.4s ease-in-out infinite}
+.sk-earring{transform-box:fill-box;transform-origin:50% 0;animation:sk-ear 3s ease-in-out infinite}
+
+@media (prefers-reduced-motion:reduce){
+  .sk-slot,.sk-holo,.sk-holo-soft,.sk-sheen,.sk-glint,.sk-caustic,.sk-particles span,
+  .sk-glow,.sk-ember,.sk-jewel,.sk-hair,.sk-tail,.sk-crest,.sk-tent1,.sk-tent2,.sk-tent3,
+  .sk-rose,.sk-lid,.sk-rays,.sk-whale,.sk-spray,.sk-godrays,.sk-flag,.sk-earring{animation:none!important}
+}
